@@ -1,8 +1,7 @@
 # Plasma Dynamic Wallpaper
 
 Bring Apple's Dynamic Desktop HEIC wallpapers to KDE Plasma.
-
-Unlike most Linux implementations, Plasma Dynamic Wallpaper reads Apple's embedded `apple_desktop:h24` metadata and uses the original schedule instead of approximating sunrise/sunset or hardcoded times.
+Plasma Dynamic Wallpaper is one of the few Linux implementations that uses Apple's embedded apple_desktop:h24 metadata directly, preserving the original Dynamic Desktop schedule instead of approximating it.
 
 ## Features
 
