@@ -1,0 +1,8 @@
+# Source dynamic HEIC wallpaper
+HEIC_FILE="$HOME/Pictures/DynamicWallpapers/Fuji/Fuji.heic"
+
+# Generated frame cache
+CACHE_DIR="$HOME/.cache/dynamic-wallpaper/Fuji"
+
+# How often systemd checks the wallpaper
+CHECK_INTERVAL_MINUTES=15
