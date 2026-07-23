@@ -62,7 +62,7 @@ def extract_frames(heic_file: Path, cache_dir: Path) -> list[Path]:
     output_path = cache_dir / "frame.png"
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             [
                 "heif-convert",
                 str(heic_file),
