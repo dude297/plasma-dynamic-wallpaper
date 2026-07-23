@@ -1,0 +1,213 @@
+"""Tests for the dynamic-wallpaper command-line interface."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from datetime import datetime
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
+
+import pytest
+
+from dynamic_wallpaper import cli
+from dynamic_wallpaper.cache import CacheError
+from dynamic_wallpaper.config import Config
+from dynamic_wallpaper.metadata import MetadataError
+from dynamic_wallpaper.plasma import PlasmaError
+from dynamic_wallpaper.scheduler import ScheduleError
+from dynamic_wallpaper.state import StateError
+
+
+def test_parse_time_accepts_24_hour_time() -> None:
+    with patch("dynamic_wallpaper.cli.datetime") as mocked_datetime:
+        mocked_datetime.strptime.return_value = datetime(1900, 1, 1, 20, 45)
+        mocked_datetime.now.return_value = datetime(2026, 7, 23, 9, 30, 10)
+
+        parsed = cli._parse_time("20:45")
+
+    assert parsed == datetime(2026, 7, 23, 20, 45)
+    mocked_datetime.strptime.assert_called_once_with("20:45", "%H:%M")
+
+
+def test_parse_time_rejects_invalid_format() -> None:
+    with pytest.raises(
+        argparse.ArgumentTypeError,
+        match="24-hour HH:MM format",
+    ):
+        cli._parse_time("8pm")
+
+
+def test_build_parser_exposes_expected_options() -> None:
+    help_text = cli.build_parser().format_help()
+
+    for option in (
+        "--inspect",
+        "--schedule",
+        "--extract",
+        "--at HH:MM",
+        "--dry-run",
+        "--force",
+    ):
+        assert option in help_text
+
+
+def run_main_with_engine(
+    monkeypatch: pytest.MonkeyPatch,
+    arguments: list[str],
+    engine: Mock,
+) -> tuple[int, Mock]:
+    config = Config(
+        heic_file=SimpleNamespace(),
+        cache_dir=SimpleNamespace(),
+    )
+    engine_type = Mock(return_value=engine)
+
+    monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper", *arguments])
+    monkeypatch.setattr(cli, "load_config", Mock(return_value=config))
+    monkeypatch.setattr(cli, "WallpaperEngine", engine_type)
+
+    return cli.main(), engine_type
+
+
+def test_main_inspects_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.inspect.return_value = '{"ti": []}'
+
+    result, engine_type = run_main_with_engine(
+        monkeypatch,
+        ["--inspect"],
+        engine,
+    )
+
+    assert result == 0
+    assert capsys.readouterr().out == '{"ti": []}\n'
+    engine_type.assert_called_once()
+    engine.inspect.assert_called_once_with()
+    engine.schedule.assert_not_called()
+    engine.apply.assert_not_called()
+
+
+def test_main_prints_schedule_lines(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.schedule.return_value = [
+        "00:00 -> frame 0",
+        "12:00 -> frame 1",
+    ]
+
+    result, _ = run_main_with_engine(
+        monkeypatch,
+        ["--schedule"],
+        engine,
+    )
+
+    assert result == 0
+    assert capsys.readouterr().out == (
+        "00:00 -> frame 0\n12:00 -> frame 1\n"
+    )
+    engine.schedule.assert_called_once_with()
+    engine.apply.assert_not_called()
+
+
+def test_main_extracts_frames(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.extract.return_value = "Prepared 7 frame(s) in /cache"
+
+    result, _ = run_main_with_engine(
+        monkeypatch,
+        ["--extract"],
+        engine,
+    )
+
+    assert result == 0
+    assert capsys.readouterr().out == "Prepared 7 frame(s) in /cache\n"
+    engine.extract.assert_called_once_with()
+    engine.apply.assert_not_called()
+
+
+def test_main_applies_selected_time_and_flags(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.apply.return_value = [
+        "Would apply frame 2/6: /cache/frame-2.png",
+        "Time 20:00; schedule entry 20:00",
+    ]
+
+    result, _ = run_main_with_engine(
+        monkeypatch,
+        ["--at", "20:00", "--dry-run", "--force"],
+        engine,
+    )
+
+    assert result == 0
+    output = capsys.readouterr().out
+    assert "Would apply frame 2/6" in output
+    selected_time = engine.apply.call_args.args[0]
+    assert selected_time.hour == 20
+    assert selected_time.minute == 0
+    assert engine.apply.call_args.kwargs == {
+        "dry_run": True,
+        "force": True,
+    }
+
+
+def test_main_uses_current_time_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    engine.apply.return_value = []
+    current_time = datetime(2026, 7, 23, 14, 15)
+
+    monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper"])
+    monkeypatch.setattr(cli, "load_config", Mock())
+    monkeypatch.setattr(cli, "WallpaperEngine", Mock(return_value=engine))
+
+    with patch("dynamic_wallpaper.cli.datetime") as mocked_datetime:
+        mocked_datetime.now.return_value = current_time
+        result = cli.main()
+
+    assert result == 0
+    engine.apply.assert_called_once_with(
+        current_time,
+        dry_run=False,
+        force=False,
+    )
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        CacheError("cache failed"),
+        FileNotFoundError("missing file"),
+        MetadataError("metadata failed"),
+        PlasmaError("plasma failed"),
+        ScheduleError("schedule failed"),
+        StateError("state failed"),
+        ValueError("configuration failed"),
+    ],
+)
+def test_main_reports_expected_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    error: Exception,
+) -> None:
+    engine = Mock()
+    engine.apply.side_effect = error
+
+    result, _ = run_main_with_engine(monkeypatch, [], engine)
+
+    captured = capsys.readouterr()
+    assert result == 1
+    assert captured.out == ""
+    assert captured.err == f"dynamic-wallpaper: {error}\n"
