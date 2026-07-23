@@ -82,8 +82,7 @@ class WallpaperEngine:
     def extract(self) -> str:
         """Prepare frames without changing the desktop wallpaper."""
         return (
-            f"Prepared {len(self.frames)} frame(s) "
-            f"in {self.config.cache_dir}"
+            f"Prepared {len(self.frames)} frame(s) in {self.config.cache_dir}"
         )
 
     def apply(
@@ -109,9 +108,7 @@ class WallpaperEngine:
                 if is_current(self.state_file, wallpaper)
                 else "Would apply"
             )
-            output.append(
-                f"{action} frame {index}/{last_index}: {wallpaper}"
-            )
+            output.append(f"{action} frame {index}/{last_index}: {wallpaper}")
         elif not force and is_current(self.state_file, wallpaper):
             output.append(
                 f"Skipped frame {index}/{last_index}: already applied"
@@ -119,9 +116,7 @@ class WallpaperEngine:
         else:
             set_wallpaper(wallpaper)
             save_state(self.state_file, wallpaper, index)
-            output.append(
-                f"Applied frame {index}/{last_index}: {wallpaper}"
-            )
+            output.append(f"Applied frame {index}/{last_index}: {wallpaper}")
 
         start_hour, start_minute = divmod(entry.minutes, 60)
         output.append(

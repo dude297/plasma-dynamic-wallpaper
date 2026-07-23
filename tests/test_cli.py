@@ -108,9 +108,7 @@ def test_main_prints_schedule_lines(
     )
 
     assert result == 0
-    assert capsys.readouterr().out == (
-        "00:00 -> frame 0\n12:00 -> frame 1\n"
-    )
+    assert capsys.readouterr().out == ("00:00 -> frame 0\n12:00 -> frame 1\n")
     engine.schedule.assert_called_once_with()
     engine.apply.assert_not_called()
 

@@ -59,6 +59,4 @@ def save_state(
         )
         temporary_path.replace(path)
     except OSError as exc:
-        raise StateError(
-            f"Could not save wallpaper state: {exc}"
-        ) from exc
+        raise StateError(f"Could not save wallpaper state: {exc}") from exc

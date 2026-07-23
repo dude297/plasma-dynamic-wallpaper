@@ -74,13 +74,13 @@ def test_inspect_formats_metadata_as_json(tmp_path: Path) -> None:
     }
 
     assert engine.inspect() == (
-        '{\n'
+        "{\n"
         '  "payload": {\n'
         '    "type": "bytes",\n'
         '    "hex": "0102"\n'
-        '  },\n'
+        "  },\n"
         '  "created": "2026-07-23T12:30:00"\n'
-        '}'
+        "}"
     )
 
 

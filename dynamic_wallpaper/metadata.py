@@ -32,9 +32,7 @@ def _run_exiftool(heic_file: Path) -> list[dict[str, Any]]:
             text=True,
         )
     except FileNotFoundError as exc:
-        raise MetadataError(
-            "exiftool is required but was not found"
-        ) from exc
+        raise MetadataError("exiftool is required but was not found") from exc
     except subprocess.CalledProcessError as exc:
         message = exc.stderr.strip() or "exiftool failed"
         raise MetadataError(message) from exc
@@ -42,9 +40,7 @@ def _run_exiftool(heic_file: Path) -> list[dict[str, Any]]:
     try:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
-        raise MetadataError(
-            "Could not decode exiftool JSON output"
-        ) from exc
+        raise MetadataError("Could not decode exiftool JSON output") from exc
 
     if not isinstance(payload, list):
         raise MetadataError("Unexpected exiftool response")
@@ -80,14 +76,10 @@ def decode_h24(heic_file: Path) -> Any:
             validate=True,
         )
     except ValueError as exc:
-        raise MetadataError(
-            "apple_desktop:h24 is not valid Base64"
-        ) from exc
+        raise MetadataError("apple_desktop:h24 is not valid Base64") from exc
 
     if not binary_plist.startswith(b"bplist00"):
-        raise MetadataError(
-            "Decoded h24 data is not an Apple binary plist"
-        )
+        raise MetadataError("Decoded h24 data is not an Apple binary plist")
 
     try:
         return plistlib.loads(binary_plist)

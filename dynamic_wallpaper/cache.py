@@ -11,7 +11,9 @@ class CacheError(RuntimeError):
 
 
 def _frame_sort_key(path: Path) -> tuple[int, str]:
-    digits = "".join(character for character in path.stem if character.isdigit())
+    digits = "".join(
+        character for character in path.stem if character.isdigit()
+    )
 
     if digits:
         return int(digits), path.name
@@ -44,9 +46,7 @@ def cache_is_current(heic_file: Path, cache_dir: Path) -> bool:
         return False
 
     try:
-        recorded_timestamp = marker.read_text(
-            encoding="utf-8"
-        ).strip()
+        recorded_timestamp = marker.read_text(encoding="utf-8").strip()
     except OSError:
         return False
 
@@ -73,9 +73,7 @@ def extract_frames(heic_file: Path, cache_dir: Path) -> list[Path]:
             text=True,
         )
     except FileNotFoundError as exc:
-        raise CacheError(
-            "heif-convert is required but was not found"
-        ) from exc
+        raise CacheError("heif-convert is required but was not found") from exc
     except subprocess.CalledProcessError as exc:
         message = exc.stderr.strip() or "heif-convert failed"
         raise CacheError(message) from exc
@@ -83,9 +81,7 @@ def extract_frames(heic_file: Path, cache_dir: Path) -> list[Path]:
     frames = find_frames(cache_dir)
 
     if not frames:
-        raise CacheError(
-            f"No frames were extracted into {cache_dir}"
-        )
+        raise CacheError(f"No frames were extracted into {cache_dir}")
 
     _source_marker(cache_dir).write_text(
         _source_timestamp(heic_file),

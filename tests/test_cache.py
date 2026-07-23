@@ -184,6 +184,4 @@ def test_prepare_frames_extracts_when_cache_is_stale(
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    assert prepare_frames(heic_file, cache_dir) == [
-        cache_dir / "frame-1.png"
-    ]
+    assert prepare_frames(heic_file, cache_dir) == [cache_dir / "frame-1.png"]

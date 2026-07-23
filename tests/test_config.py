@@ -46,8 +46,7 @@ def test_parse_assignment_expands_home(
 def test_load_config_reads_required_values(tmp_path: Path) -> None:
     config_file = tmp_path / "config"
     config_file.write_text(
-        "HEIC_FILE=/wallpapers/Fuji.heic\n"
-        "CACHE_DIR=/tmp/dynamic-wallpaper\n",
+        "HEIC_FILE=/wallpapers/Fuji.heic\nCACHE_DIR=/tmp/dynamic-wallpaper\n",
         encoding="utf-8",
     )
 
@@ -60,9 +59,7 @@ def test_load_config_reads_required_values(tmp_path: Path) -> None:
 def test_load_config_uses_last_duplicate_setting(tmp_path: Path) -> None:
     config_file = tmp_path / "config"
     config_file.write_text(
-        "HEIC_FILE=/old.heic\n"
-        "HEIC_FILE=/new.heic\n"
-        "CACHE_DIR=/cache\n",
+        "HEIC_FILE=/old.heic\nHEIC_FILE=/new.heic\nCACHE_DIR=/cache\n",
         encoding="utf-8",
     )
 

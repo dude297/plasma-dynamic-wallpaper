@@ -52,7 +52,7 @@ def test_set_wallpaper_invokes_plasma_shell(tmp_path: Path) -> None:
     assert 'desktop.wallpaperPlugin = "org.kde.image";' in script
     assert 'desktop.writeConfig("Image",' in script
     assert image.resolve().as_uri() in script
-    assert '%22day%22' in script
+    assert "%22day%22" in script
 
 
 def test_set_wallpaper_uses_stderr_from_failed_command(

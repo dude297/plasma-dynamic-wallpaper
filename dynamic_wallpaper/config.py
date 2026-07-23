@@ -23,11 +23,7 @@ def _parse_assignment(line: str) -> tuple[str, str] | None:
     key = key.strip()
     value = value.strip()
 
-    if (
-        len(value) >= 2
-        and value[0] == value[-1]
-        and value[0] in {"'", '"'}
-    ):
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
         value = value[1:-1]
 
     value = os.path.expandvars(os.path.expanduser(value))
@@ -60,9 +56,7 @@ def load_config(path: Path | None = None) -> Config:
         heic_file = Path(values["HEIC_FILE"])
         cache_dir = Path(values["CACHE_DIR"])
     except KeyError as exc:
-        raise ValueError(
-            f"Missing required setting: {exc.args[0]}"
-        ) from exc
+        raise ValueError(f"Missing required setting: {exc.args[0]}") from exc
 
     return Config(
         heic_file=heic_file,
