@@ -28,3 +28,9 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"dynamic_wallpaper/cli.py" = ["DTZ005", "DTZ007"]
+"tests/test_cli.py" = ["DTZ001"]
+"tests/test_engine.py" = ["DTZ001"]
+"tests/test_scheduler.py" = ["DTZ001"]

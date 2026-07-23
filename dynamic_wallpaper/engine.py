@@ -69,9 +69,11 @@ class WallpaperEngine:
             lines.extend(
                 [
                     "",
-                    "Appearance alternatives: "
-                    f"light={appearance.get('l')}, "
-                    f"dark={appearance.get('d')}",
+                    (
+                        "Appearance alternatives: "
+                        f"light={appearance.get('l')}, "
+                        f"dark={appearance.get('d')}"
+                    ),
                 ]
             )
 
