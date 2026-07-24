@@ -14,9 +14,11 @@ from dynamic_wallpaper.plasma import PlasmaError, set_wallpaper
 def test_set_wallpaper_requires_qdbus6(tmp_path: Path) -> None:
     image = tmp_path / "wallpaper.png"
 
-    with patch("dynamic_wallpaper.plasma.shutil.which", return_value=None):
-        with pytest.raises(PlasmaError, match="qdbus6 was not found"):
-            set_wallpaper(image)
+    with (
+        patch("dynamic_wallpaper.plasma.shutil.which", return_value=None),
+        pytest.raises(PlasmaError, match="qdbus6 was not found"),
+    ):
+        set_wallpaper(image)
 
 
 def test_set_wallpaper_invokes_plasma_shell(tmp_path: Path) -> None:
