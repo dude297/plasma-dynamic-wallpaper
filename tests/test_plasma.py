@@ -74,9 +74,9 @@ def test_set_wallpaper_uses_stderr_from_failed_command(
             "dynamic_wallpaper.plasma.subprocess.run",
             side_effect=error,
         ),
+        pytest.raises(PlasmaError, match="Plasma is unavailable"),
     ):
-        with pytest.raises(PlasmaError, match="Plasma is unavailable"):
-            set_wallpaper(tmp_path / "wallpaper.png")
+        set_wallpaper(tmp_path / "wallpaper.png")
 
 
 def test_set_wallpaper_falls_back_to_stdout_from_failed_command(
@@ -98,9 +98,9 @@ def test_set_wallpaper_falls_back_to_stdout_from_failed_command(
             "dynamic_wallpaper.plasma.subprocess.run",
             side_effect=error,
         ),
+        pytest.raises(PlasmaError, match="evaluation failed"),
     ):
-        with pytest.raises(PlasmaError, match="evaluation failed"):
-            set_wallpaper(tmp_path / "wallpaper.png")
+        set_wallpaper(tmp_path / "wallpaper.png")
 
 
 def test_set_wallpaper_uses_generic_message_for_empty_failure(
@@ -122,9 +122,9 @@ def test_set_wallpaper_uses_generic_message_for_empty_failure(
             "dynamic_wallpaper.plasma.subprocess.run",
             side_effect=error,
         ),
-    ):
-        with pytest.raises(
+        pytest.raises(
             PlasmaError,
             match="Plasma rejected the wallpaper update",
-        ):
-            set_wallpaper(tmp_path / "wallpaper.png")
+        ),
+    ):
+        set_wallpaper(tmp_path / "wallpaper.png")

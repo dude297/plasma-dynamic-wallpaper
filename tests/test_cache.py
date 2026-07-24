@@ -1,7 +1,7 @@
 """Tests for HEIC frame extraction and cache management."""
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 import pytest
 

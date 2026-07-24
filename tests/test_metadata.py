@@ -18,7 +18,6 @@ from dynamic_wallpaper.metadata import (
     extract_h24_value,
 )
 
-
 HEIC_FILE = Path("/tmp/wallpaper.heic")
 
 
@@ -59,12 +58,14 @@ def test_run_exiftool_requests_h24_metadata() -> None:
 
 
 def test_run_exiftool_reports_missing_executable() -> None:
-    with patch(
-        "dynamic_wallpaper.metadata.subprocess.run",
-        side_effect=FileNotFoundError,
+    with (
+        patch(
+            "dynamic_wallpaper.metadata.subprocess.run",
+            side_effect=FileNotFoundError,
+        ),
+        pytest.raises(MetadataError, match="exiftool is required"),
     ):
-        with pytest.raises(MetadataError, match="exiftool is required"):
-            _run_exiftool(HEIC_FILE)
+        _run_exiftool(HEIC_FILE)
 
 
 def test_run_exiftool_reports_command_failure_stderr() -> None:
@@ -74,12 +75,14 @@ def test_run_exiftool_reports_command_failure_stderr() -> None:
         stderr="cannot read HEIC",
     )
 
-    with patch(
-        "dynamic_wallpaper.metadata.subprocess.run",
-        side_effect=error,
+    with (
+        patch(
+            "dynamic_wallpaper.metadata.subprocess.run",
+            side_effect=error,
+        ),
+        pytest.raises(MetadataError, match="cannot read HEIC"),
     ):
-        with pytest.raises(MetadataError, match="cannot read HEIC"):
-            _run_exiftool(HEIC_FILE)
+        _run_exiftool(HEIC_FILE)
 
 
 def test_run_exiftool_uses_fallback_command_failure_message() -> None:
@@ -89,30 +92,36 @@ def test_run_exiftool_uses_fallback_command_failure_message() -> None:
         stderr="",
     )
 
-    with patch(
-        "dynamic_wallpaper.metadata.subprocess.run",
-        side_effect=error,
+    with (
+        patch(
+            "dynamic_wallpaper.metadata.subprocess.run",
+            side_effect=error,
+        ),
+        pytest.raises(MetadataError, match="exiftool failed"),
     ):
-        with pytest.raises(MetadataError, match="exiftool failed"):
-            _run_exiftool(HEIC_FILE)
+        _run_exiftool(HEIC_FILE)
 
 
 def test_run_exiftool_rejects_invalid_json() -> None:
-    with patch(
-        "dynamic_wallpaper.metadata.subprocess.run",
-        return_value=completed_process("not-json"),
+    with (
+        patch(
+            "dynamic_wallpaper.metadata.subprocess.run",
+            return_value=completed_process("not-json"),
+        ),
+        pytest.raises(MetadataError, match="exiftool JSON output"),
     ):
-        with pytest.raises(MetadataError, match="exiftool JSON output"):
-            _run_exiftool(HEIC_FILE)
+        _run_exiftool(HEIC_FILE)
 
 
 def test_run_exiftool_rejects_non_list_response() -> None:
-    with patch(
-        "dynamic_wallpaper.metadata.subprocess.run",
-        return_value=completed_process('{"H24": "encoded"}'),
+    with (
+        patch(
+            "dynamic_wallpaper.metadata.subprocess.run",
+            return_value=completed_process('{"H24": "encoded"}'),
+        ),
+        pytest.raises(MetadataError, match="Unexpected exiftool"),
     ):
-        with pytest.raises(MetadataError, match="Unexpected exiftool"):
-            _run_exiftool(HEIC_FILE)
+        _run_exiftool(HEIC_FILE)
 
 
 def test_extract_h24_value_accepts_normalized_key_and_trims_value() -> None:
@@ -136,34 +145,40 @@ def test_extract_h24_value_matches_key_case_insensitively() -> None:
 
 
 def test_extract_h24_value_rejects_empty_payload() -> None:
-    with patch(
-        "dynamic_wallpaper.metadata._run_exiftool",
-        return_value=[],
+    with (
+        patch(
+            "dynamic_wallpaper.metadata._run_exiftool",
+            return_value=[],
+        ),
+        pytest.raises(MetadataError, match="No metadata was returned"),
     ):
-        with pytest.raises(MetadataError, match="No metadata was returned"):
-            extract_h24_value(HEIC_FILE)
+        extract_h24_value(HEIC_FILE)
 
 
 def test_extract_h24_value_rejects_missing_h24() -> None:
     payload = [{"SourceFile": str(HEIC_FILE)}]
 
-    with patch(
-        "dynamic_wallpaper.metadata._run_exiftool",
-        return_value=payload,
+    with (
+        patch(
+            "dynamic_wallpaper.metadata._run_exiftool",
+            return_value=payload,
+        ),
+        pytest.raises(MetadataError, match="does not contain"),
     ):
-        with pytest.raises(MetadataError, match="does not contain"):
-            extract_h24_value(HEIC_FILE)
+        extract_h24_value(HEIC_FILE)
 
 
 def test_extract_h24_value_rejects_non_string_h24() -> None:
     payload = [{"XMP-apple_desktop:H24": 123}]
 
-    with patch(
-        "dynamic_wallpaper.metadata._run_exiftool",
-        return_value=payload,
+    with (
+        patch(
+            "dynamic_wallpaper.metadata._run_exiftool",
+            return_value=payload,
+        ),
+        pytest.raises(MetadataError, match="does not contain"),
     ):
-        with pytest.raises(MetadataError, match="does not contain"):
-            extract_h24_value(HEIC_FILE)
+        extract_h24_value(HEIC_FILE)
 
 
 def test_decode_h24_returns_embedded_property_list() -> None:
@@ -183,31 +198,37 @@ def test_decode_h24_returns_embedded_property_list() -> None:
 
 
 def test_decode_h24_rejects_invalid_base64() -> None:
-    with patch(
-        "dynamic_wallpaper.metadata.extract_h24_value",
-        return_value="not valid base64!",
+    with (
+        patch(
+            "dynamic_wallpaper.metadata.extract_h24_value",
+            return_value="not valid base64!",
+        ),
+        pytest.raises(MetadataError, match="not valid Base64"),
     ):
-        with pytest.raises(MetadataError, match="not valid Base64"):
-            decode_h24(HEIC_FILE)
+        decode_h24(HEIC_FILE)
 
 
 def test_decode_h24_rejects_non_binary_plist() -> None:
     encoded = base64.b64encode(b"plain text").decode("ascii")
 
-    with patch(
-        "dynamic_wallpaper.metadata.extract_h24_value",
-        return_value=encoded,
+    with (
+        patch(
+            "dynamic_wallpaper.metadata.extract_h24_value",
+            return_value=encoded,
+        ),
+        pytest.raises(MetadataError, match="not an Apple binary plist"),
     ):
-        with pytest.raises(MetadataError, match="not an Apple binary plist"):
-            decode_h24(HEIC_FILE)
+        decode_h24(HEIC_FILE)
 
 
 def test_decode_h24_rejects_malformed_binary_plist() -> None:
     encoded = base64.b64encode(b"bplist00malformed").decode("ascii")
 
-    with patch(
-        "dynamic_wallpaper.metadata.extract_h24_value",
-        return_value=encoded,
+    with (
+        patch(
+            "dynamic_wallpaper.metadata.extract_h24_value",
+            return_value=encoded,
+        ),
+        pytest.raises(MetadataError, match="Could not parse"),
     ):
-        with pytest.raises(MetadataError, match="Could not parse"):
-            decode_h24(HEIC_FILE)
+        decode_h24(HEIC_FILE)
