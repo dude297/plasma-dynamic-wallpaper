@@ -9,6 +9,23 @@ description = "Use Apple's Dynamic Desktop HEIC wallpapers on KDE Plasma."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
+keywords = ["kde", "plasma", "wallpaper", "heic", "dynamic-desktop"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: KDE",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Desktop Environment",
+]
+
+[project.urls]
+Homepage = "https://github.com/dude297/plasma-dynamic-wallpaper"
+Repository = "https://github.com/dude297/plasma-dynamic-wallpaper"
+Issues = "https://github.com/dude297/plasma-dynamic-wallpaper/issues"
 
 [project.optional-dependencies]
 dev = [
