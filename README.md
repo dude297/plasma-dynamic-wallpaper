@@ -124,9 +124,9 @@ User configuration and cache are preserved.
 
 - Multiple wallpaper collections
 - Additional desktop environments
-- Automated tests
-- GitHub Actions
-- Package distribution
+- PyPI publishing
+- Signed release artifacts
+- Additional desktop backends
 
 ## License
 
@@ -220,3 +220,17 @@ current user.
 The embedded schedule selects discrete frames. Frequent lightweight checks keep
 the desktop near the intended transition time, while state tracking prevents
 unnecessary reapplication.
+
+## Releases
+
+Tagged releases are validated and published through GitHub Actions. Each
+GitHub Release includes the installable wheel and source archive built from the
+corresponding tag.
+
+Release tags must exactly match the package version in `pyproject.toml`. For
+example, package version `0.1.0` must use tag `v0.1.0`. The workflow also
+requires a non-empty matching section in `CHANGELOG.md` and runs lint, tests,
+coverage, build validation, and installed-command smoke tests before publishing.
+
+PyPI publishing is not enabled yet. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+the maintainer release checklist.

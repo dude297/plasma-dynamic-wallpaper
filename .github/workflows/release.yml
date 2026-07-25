@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Validate and publish GitHub release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install development dependencies
+        run: >-
+          python -m pip install --upgrade pip
+          && python -m pip install -e ".[dev]"
+
+      - name: Verify tag matches package version
+        id: release-metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_version="$(python -c 'import tomllib; from pathlib import Path; project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8")); print(project["project"]["version"])')"
+          expected_tag="v${package_version}"
+
+          if [[ "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
+            echo "Release tag ${GITHUB_REF_NAME} does not match package version ${package_version}." >&2
+            echo "Update pyproject.toml or create tag ${expected_tag}." >&2
+            exit 1
+          fi
+
+          echo "version=${package_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Run Ruff lint
+        run: python -m ruff check .
+
+      - name: Check Ruff formatting
+        run: python -m ruff format --check .
+
+      - name: Run tests with coverage
+        run: >-
+          python -m pytest
+          --cov=dynamic_wallpaper
+          --cov-report=term-missing
+          --cov-report=xml
+
+      - name: Build wheel and source distribution
+        run: python -m build
+
+      - name: Validate distribution metadata
+        run: python -m twine check dist/*
+
+      - name: Install and smoke-test built wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --force-reinstall dist/*.whl
+          dynamic-wallpaper --version
+          dynamic-wallpaper --help
+
+      - name: Prepare changelog release notes
+        env:
+          RELEASE_VERSION: ${{ steps.release-metadata.outputs.version }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          heading = re.search(
+              rf"^## \[{re.escape(version)}\](?:\s+-\s+.*)?\s*$",
+              changelog,
+              flags=re.MULTILINE,
+          )
+          if heading is None:
+              raise SystemExit(
+                  f"CHANGELOG.md has no release section for version {version}."
+              )
+
+          remainder = changelog[heading.end():]
+          next_heading = re.search(r"^## \[", remainder, flags=re.MULTILINE)
+          section = remainder[: next_heading.start() if next_heading else None].strip()
+          if not section:
+              raise SystemExit(
+                  f"CHANGELOG.md release section {version} is empty."
+              )
+
+          notes = f"# Plasma Dynamic Wallpaper {version}\n\n{section}\n"
+          Path("RELEASE_NOTES.md").write_text(notes, encoding="utf-8")
+          PY
+
+      - name: Upload release verification artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-verification-${{ steps.release-metadata.outputs.version }}
+          path: |
+            coverage.xml
+            dist/
+            RELEASE_NOTES.md
+          if-no-files-found: error
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.release-metadata.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/*.whl \
+            dist/*.tar.gz \
+            --verify-tag \
+            --title "Plasma Dynamic Wallpaper ${RELEASE_VERSION}" \
+            --notes-file RELEASE_NOTES.md
