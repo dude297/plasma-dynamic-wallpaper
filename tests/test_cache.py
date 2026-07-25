@@ -35,7 +35,7 @@ def test_cache_is_current_requires_marker_and_frames(tmp_path: Path) -> None:
     assert cache_is_current(heic_file, cache_dir) is False
 
     (cache_dir / ".source-mtime").write_text(
-        str(heic_file.stat().st_mtime_ns),
+        f"{heic_file.stat().st_mtime_ns}\n1\n",
         encoding="utf-8",
     )
 
@@ -49,11 +49,39 @@ def test_cache_is_current_matches_source_timestamp(tmp_path: Path) -> None:
     cache_dir.mkdir()
     (cache_dir / "frame-1.png").touch()
     (cache_dir / ".source-mtime").write_text(
-        str(heic_file.stat().st_mtime_ns),
+        f"{heic_file.stat().st_mtime_ns}\n1\n",
         encoding="utf-8",
     )
 
     assert cache_is_current(heic_file, cache_dir) is True
+
+
+def test_cache_is_current_rejects_incomplete_frame_set(tmp_path: Path) -> None:
+    heic_file = tmp_path / "wallpaper.heic"
+    cache_dir = tmp_path / "cache"
+    heic_file.touch()
+    cache_dir.mkdir()
+    (cache_dir / "frame-1.png").touch()
+    (cache_dir / ".source-mtime").write_text(
+        f"{heic_file.stat().st_mtime_ns}\n2\n",
+        encoding="utf-8",
+    )
+
+    assert cache_is_current(heic_file, cache_dir) is False
+
+
+def test_cache_is_current_rejects_legacy_marker(tmp_path: Path) -> None:
+    heic_file = tmp_path / "wallpaper.heic"
+    cache_dir = tmp_path / "cache"
+    heic_file.touch()
+    cache_dir.mkdir()
+    (cache_dir / "frame-1.png").touch()
+    (cache_dir / ".source-mtime").write_text(
+        str(heic_file.stat().st_mtime_ns),
+        encoding="utf-8",
+    )
+
+    assert cache_is_current(heic_file, cache_dir) is False
 
 
 def test_cache_is_current_rejects_stale_timestamp(tmp_path: Path) -> None:
@@ -62,7 +90,7 @@ def test_cache_is_current_rejects_stale_timestamp(tmp_path: Path) -> None:
     heic_file.touch()
     cache_dir.mkdir()
     (cache_dir / "frame-1.png").touch()
-    (cache_dir / ".source-mtime").write_text("0", encoding="utf-8")
+    (cache_dir / ".source-mtime").write_text("0\n1\n", encoding="utf-8")
 
     assert cache_is_current(heic_file, cache_dir) is False
 
@@ -79,18 +107,17 @@ def test_extract_frames_removes_old_frames_and_records_source(
     old_frame.touch()
 
     def fake_run(command: list[str], **kwargs: object) -> None:
-        assert command == [
-            "heif-convert",
-            str(heic_file),
-            str(cache_dir / "frame.png"),
-        ]
+        output_path = Path(command[-1])
+        assert command[:2] == ["heif-convert", str(heic_file)]
+        assert output_path.name == "frame.png"
+        assert output_path.parent.parent == cache_dir.parent
         assert kwargs == {
             "check": True,
             "capture_output": True,
             "text": True,
         }
-        (cache_dir / "frame-1.png").touch()
-        (cache_dir / "frame-2.png").touch()
+        (output_path.parent / "frame-1.png").touch()
+        (output_path.parent / "frame-2.png").touch()
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
@@ -98,8 +125,8 @@ def test_extract_frames_removes_old_frames_and_records_source(
 
     assert old_frame.exists() is False
     assert [path.name for path in frames] == ["frame-1.png", "frame-2.png"]
-    assert (cache_dir / ".source-mtime").read_text(encoding="utf-8") == str(
-        heic_file.stat().st_mtime_ns
+    assert (cache_dir / ".source-mtime").read_text(encoding="utf-8") == (
+        f"{heic_file.stat().st_mtime_ns}\n2\n"
     )
 
 
@@ -147,6 +174,36 @@ def test_extract_frames_rejects_empty_output(
         extract_frames(tmp_path / "wallpaper.heic", tmp_path / "cache")
 
 
+def test_extract_frames_preserves_cache_when_interrupted(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    heic_file = tmp_path / "wallpaper.heic"
+    cache_dir = tmp_path / "cache"
+    heic_file.touch()
+    cache_dir.mkdir()
+    old_frame = cache_dir / "frame-1.png"
+    old_frame.touch()
+    marker = cache_dir / ".source-mtime"
+    marker.write_text(
+        f"{heic_file.stat().st_mtime_ns}\n1\n",
+        encoding="utf-8",
+    )
+
+    def interrupted(*args: object, **kwargs: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(subprocess, "run", interrupted)
+
+    with pytest.raises(KeyboardInterrupt):
+        extract_frames(heic_file, cache_dir)
+
+    assert old_frame.is_file()
+    assert marker.is_file()
+    assert cache_is_current(heic_file, cache_dir) is True
+    assert not list(tmp_path.glob(".cache.rebuild-*"))
+
+
 def test_prepare_frames_reuses_current_cache(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -158,7 +215,7 @@ def test_prepare_frames_reuses_current_cache(
     frame = cache_dir / "frame-1.png"
     frame.touch()
     (cache_dir / ".source-mtime").write_text(
-        str(heic_file.stat().st_mtime_ns),
+        f"{heic_file.stat().st_mtime_ns}\n1\n",
         encoding="utf-8",
     )
 
@@ -178,9 +235,9 @@ def test_prepare_frames_extracts_when_cache_is_stale(
     cache_dir = tmp_path / "cache"
     heic_file.touch()
 
-    def fake_run(*args: object, **kwargs: object) -> None:
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        (cache_dir / "frame-1.png").touch()
+    def fake_run(command: list[str], **kwargs: object) -> None:
+        output_path = Path(command[-1])
+        (output_path.parent / "frame-1.png").touch()
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 

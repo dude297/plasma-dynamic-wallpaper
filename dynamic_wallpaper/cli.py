@@ -71,6 +71,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="show the last successfully applied wallpaper",
     )
     actions.add_argument(
+        "--cache-status",
+        action="store_true",
+        help="show cache freshness and extracted frame count",
+    )
+    actions.add_argument(
+        "--rebuild-cache",
+        action="store_true",
+        help="force extraction and replace cached frames",
+    )
+    actions.add_argument(
         "--inspect",
         action="store_true",
         help="print the decoded Apple metadata",
@@ -131,6 +141,20 @@ def main() -> int:
                 print(line)
             return 0
 
+        if args.cache_status:
+            for line in engine.cache_status():
+                print(line)
+            return 0
+
+        if args.rebuild_cache:
+            print(
+                f"Rebuilding cache in {config.cache_dir}...",
+                file=sys.stderr,
+                flush=True,
+            )
+            print(engine.rebuild_cache())
+            return 0
+
         if args.inspect:
             print(engine.inspect())
             return 0
@@ -155,6 +179,12 @@ def main() -> int:
 
         return 0
 
+    except KeyboardInterrupt:
+        print(
+            "dynamic-wallpaper: operation interrupted; existing cache preserved",
+            file=sys.stderr,
+        )
+        return 130
     except (
         CacheError,
         FileNotFoundError,

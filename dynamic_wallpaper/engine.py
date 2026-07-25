@@ -7,7 +7,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .cache import prepare_frames
+from .cache import (
+    cache_is_current,
+    extract_frames,
+    find_frames,
+    prepare_frames,
+)
 from .config import Config
 from .metadata import decode_h24
 from .plasma import set_wallpaper
@@ -83,6 +88,29 @@ class WallpaperEngine:
             + ("present" if Path(wallpaper).is_file() else "missing")
         )
         return lines
+
+    def cache_status(self) -> list[str]:
+        """Return cache freshness and frame inventory details."""
+        frames = find_frames(self.config.cache_dir)
+        current = self.config.heic_file.is_file() and cache_is_current(
+            self.config.heic_file, self.config.cache_dir
+        )
+
+        return [
+            f"Cache directory: {self.config.cache_dir}",
+            f"Cached frames: {len(frames)}",
+            f"Cache current: {'yes' if current else 'no'}",
+        ]
+
+    def rebuild_cache(self) -> str:
+        """Force frame extraction even when the cache appears current."""
+        self._frames = extract_frames(
+            self.config.heic_file,
+            self.config.cache_dir,
+        )
+        return (
+            f"Rebuilt {len(self._frames)} frame(s) in {self.config.cache_dir}"
+        )
 
     def inspect(self) -> str:
         """Return decoded metadata as formatted JSON."""

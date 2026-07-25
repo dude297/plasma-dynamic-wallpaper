@@ -9,6 +9,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- `dynamic-wallpaper --cache-status` reporting for cache freshness and extracted frame count.
+- `dynamic-wallpaper --rebuild-cache` for forced frame re-extraction without manual cache deletion.
 - `dynamic-wallpaper --config` output for the active configuration file, HEIC source, and cache directory.
 - `dynamic-wallpaper --doctor` readiness checks for dependencies, configuration, wallpaper access, and cache-directory availability.
 - `dynamic-wallpaper --status` reporting for the last successfully applied frame, timestamp, and cached wallpaper availability.

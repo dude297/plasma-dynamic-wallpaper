@@ -60,6 +60,8 @@ def test_build_parser_exposes_expected_options() -> None:
         "--doctor",
         "--config",
         "--status",
+        "--cache-status",
+        "--rebuild-cache",
         "--inspect",
         "--schedule",
         "--extract",
@@ -178,6 +180,44 @@ def test_main_prints_status(
         "Last wallpaper: /cache/frame-2.png\nLast frame: 2\n"
     )
     engine.status.assert_called_once_with()
+    engine.apply.assert_not_called()
+
+
+def test_main_prints_cache_status(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.cache_status.return_value = [
+        "Cache directory: /cache/Fuji",
+        "Cached frames: 7",
+        "Cache current: yes",
+    ]
+
+    result, _ = run_main_with_engine(monkeypatch, ["--cache-status"], engine)
+
+    assert result == 0
+    assert capsys.readouterr().out == (
+        "Cache directory: /cache/Fuji\nCached frames: 7\nCache current: yes\n"
+    )
+    engine.cache_status.assert_called_once_with()
+    engine.apply.assert_not_called()
+
+
+def test_main_rebuilds_cache(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.rebuild_cache.return_value = "Rebuilt 7 frame(s) in /cache/Fuji"
+
+    result, _ = run_main_with_engine(monkeypatch, ["--rebuild-cache"], engine)
+
+    assert result == 0
+    captured = capsys.readouterr()
+    assert captured.out == "Rebuilt 7 frame(s) in /cache/Fuji\n"
+    assert captured.err == "Rebuilding cache in namespace()...\n"
+    engine.rebuild_cache.assert_called_once_with()
     engine.apply.assert_not_called()
 
 
@@ -321,3 +361,19 @@ def test_main_reports_expected_errors(
     assert result == 1
     assert captured.out == ""
     assert captured.err == f"dynamic-wallpaper: {error}\n"
+
+
+def test_main_handles_interrupted_rebuild(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.rebuild_cache.side_effect = KeyboardInterrupt
+
+    result, _ = run_main_with_engine(monkeypatch, ["--rebuild-cache"], engine)
+
+    captured = capsys.readouterr()
+    assert result == 130
+    assert captured.out == ""
+    assert "Rebuilding cache" in captured.err
+    assert "operation interrupted; existing cache preserved" in captured.err

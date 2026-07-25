@@ -63,6 +63,8 @@ dynamic-wallpaper                 # Apply wallpaper
 dynamic-wallpaper --schedule      # Show Apple schedule
 dynamic-wallpaper --config        # Show active configuration paths
 dynamic-wallpaper --status        # Show last applied wallpaper
+dynamic-wallpaper --cache-status  # Show cache freshness and frame count
+dynamic-wallpaper --rebuild-cache # Force frame re-extraction
 dynamic-wallpaper --inspect       # View decoded metadata
 dynamic-wallpaper --extract       # Extract frames only
 dynamic-wallpaper --dry-run       # Preview selected frame
@@ -80,6 +82,21 @@ dynamic-wallpaper --config
 
 Primary information commands are mutually exclusive. For example,
 `--status --schedule` is rejected instead of silently choosing one action.
+
+### Manage the frame cache
+
+Inspect cache freshness without modifying files:
+
+```bash
+dynamic-wallpaper --cache-status
+```
+
+Force a clean frame extraction when the HEIC was replaced without a detectable
+timestamp change or cached output is suspected to be damaged:
+
+```bash
+dynamic-wallpaper --rebuild-cache
+```
 
 ### Check installation health
 
@@ -229,7 +246,7 @@ journalctl --user -u dynamic-wallpaper.service -n 50
 ### A wallpaper change is not detected
 
 Run once with `--force`. If the source HEIC was replaced without its timestamp
-changing, remove its frame cache directory and run `--extract` again.
+changing, run `dynamic-wallpaper --rebuild-cache`.
 
 ## FAQ
 

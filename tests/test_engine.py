@@ -67,6 +67,51 @@ def test_state_file_is_next_to_active_cache_directory(tmp_path: Path) -> None:
     assert engine.state_file == tmp_path / "cache" / "state.json"
 
 
+def test_cache_status_reports_current_cache(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+    engine.config.heic_file.touch()
+    engine.config.cache_dir.mkdir(parents=True)
+    (engine.config.cache_dir / "frame-1.png").touch()
+    (engine.config.cache_dir / "frame-2.png").touch()
+
+    with patch("dynamic_wallpaper.engine.cache_is_current", return_value=True):
+        lines = engine.cache_status()
+
+    assert lines == [
+        f"Cache directory: {engine.config.cache_dir}",
+        "Cached frames: 2",
+        "Cache current: yes",
+    ]
+
+
+def test_cache_status_reports_missing_source_as_stale(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+
+    with patch("dynamic_wallpaper.engine.cache_is_current") as check_current:
+        lines = engine.cache_status()
+
+    assert lines[-2:] == ["Cached frames: 0", "Cache current: no"]
+    check_current.assert_not_called()
+
+
+def test_rebuild_cache_forces_extraction(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+    frames = [tmp_path / "frame-1.png", tmp_path / "frame-2.png"]
+
+    with patch(
+        "dynamic_wallpaper.engine.extract_frames",
+        return_value=frames,
+    ) as extract:
+        result = engine.rebuild_cache()
+
+    assert result == f"Rebuilt 2 frame(s) in {engine.config.cache_dir}"
+    assert engine._frames == frames
+    extract.assert_called_once_with(
+        engine.config.heic_file,
+        engine.config.cache_dir,
+    )
+
+
 def test_inspect_formats_metadata_as_json(tmp_path: Path) -> None:
     engine = make_engine(tmp_path)
     engine._metadata = {
