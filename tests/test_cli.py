@@ -19,6 +19,19 @@ from dynamic_wallpaper.scheduler import ScheduleError
 from dynamic_wallpaper.state import StateError
 
 
+def test_package_version_uses_installed_metadata() -> None:
+    with patch("dynamic_wallpaper.cli.version", return_value="1.2.3"):
+        assert cli._package_version() == "1.2.3"
+
+
+def test_package_version_has_source_fallback() -> None:
+    with patch(
+        "dynamic_wallpaper.cli.version",
+        side_effect=cli.PackageNotFoundError,
+    ):
+        assert cli._package_version() == "0+unknown"
+
+
 def test_parse_time_accepts_24_hour_time() -> None:
     with patch("dynamic_wallpaper.cli.datetime") as mocked_datetime:
         mocked_datetime.strptime.return_value = datetime(1900, 1, 1, 20, 45)
@@ -42,6 +55,7 @@ def test_build_parser_exposes_expected_options() -> None:
     help_text = cli.build_parser().format_help()
 
     for option in (
+        "--version",
         "--inspect",
         "--schedule",
         "--extract",
@@ -65,6 +79,7 @@ def run_main_with_engine(
 
     monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper", *arguments])
     monkeypatch.setattr(cli, "load_config", Mock(return_value=config))
+    monkeypatch.setattr(cli, "validate_config", Mock())
     monkeypatch.setattr(cli, "WallpaperEngine", engine_type)
 
     return cli.main(), engine_type
@@ -169,6 +184,7 @@ def test_main_uses_current_time_by_default(
 
     monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper"])
     monkeypatch.setattr(cli, "load_config", Mock())
+    monkeypatch.setattr(cli, "validate_config", Mock())
     monkeypatch.setattr(cli, "WallpaperEngine", Mock(return_value=engine))
 
     with patch("dynamic_wallpaper.cli.datetime") as mocked_datetime:

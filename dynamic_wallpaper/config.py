@@ -62,3 +62,18 @@ def load_config(path: Path | None = None) -> Config:
         heic_file=heic_file,
         cache_dir=cache_dir,
     )
+
+
+def validate_config(config: Config) -> None:
+    """Validate configuration values before wallpaper processing starts."""
+    if config.heic_file.suffix.casefold() != ".heic":
+        raise ValueError(
+            "HEIC_FILE must point to a .heic file: "
+            f"{config.heic_file}"
+        )
+
+    if config.cache_dir.exists() and not config.cache_dir.is_dir():
+        raise ValueError(
+            "CACHE_DIR must point to a directory: "
+            f"{config.cache_dir}"
+        )

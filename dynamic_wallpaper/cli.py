@@ -5,14 +5,23 @@ from __future__ import annotations
 import argparse
 import sys
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
 
 from .cache import CacheError
-from .config import load_config
+from .config import load_config, validate_config
 from .engine import WallpaperEngine
 from .metadata import MetadataError
 from .plasma import PlasmaError
 from .scheduler import ScheduleError
 from .state import StateError
+
+
+def _package_version() -> str:
+    """Return the installed package version."""
+    try:
+        return version("plasma-dynamic-wallpaper")
+    except PackageNotFoundError:
+        return "0+unknown"
 
 
 def _parse_time(value: str) -> datetime:
@@ -39,6 +48,11 @@ def build_parser() -> argparse.ArgumentParser:
         description="Use Apple Dynamic Desktop HEIC files on KDE Plasma.",
     )
 
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {_package_version()}",
+    )
     parser.add_argument(
         "--inspect",
         action="store_true",
@@ -78,7 +92,9 @@ def main() -> int:
     args = build_parser().parse_args()
 
     try:
-        engine = WallpaperEngine(load_config())
+        config = load_config()
+        validate_config(config)
+        engine = WallpaperEngine(config)
 
         if args.inspect:
             print(engine.inspect())

@@ -29,8 +29,11 @@ Issues = "https://github.com/dude297/plasma-dynamic-wallpaper/issues"
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2",
     "pytest>=9",
-    "ruff>=0.15",
+    "pytest-cov>=7",
+    "ruff~=0.15.0",
+    "twine>=6",
 ]
 
 [project.scripts]

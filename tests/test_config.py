@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from dynamic_wallpaper.config import Config, _parse_assignment, load_config
+from dynamic_wallpaper.config import (
+    Config,
+    _parse_assignment,
+    load_config,
+    validate_config,
+)
 
 
 def test_parse_assignment_ignores_blank_comments_and_invalid_lines() -> None:
@@ -112,3 +117,26 @@ def test_load_config_rejects_missing_required_setting(
 
     with pytest.raises(ValueError, match=missing_key):
         load_config(config_file)
+
+
+def test_validate_config_accepts_heic_and_directory(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+
+    validate_config(Config(tmp_path / "wallpaper.HEIC", cache_dir))
+
+
+def test_validate_config_rejects_non_heic_file(tmp_path: Path) -> None:
+    config = Config(tmp_path / "wallpaper.jpg", tmp_path / "cache")
+
+    with pytest.raises(ValueError, match="HEIC_FILE must point"):
+        validate_config(config)
+
+
+def test_validate_config_rejects_cache_file(tmp_path: Path) -> None:
+    cache_file = tmp_path / "cache"
+    cache_file.write_text("not a directory", encoding="utf-8")
+    config = Config(tmp_path / "wallpaper.heic", cache_file)
+
+    with pytest.raises(ValueError, match="CACHE_DIR must point"):
+        validate_config(config)

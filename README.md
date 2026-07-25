@@ -131,3 +131,92 @@ User configuration and cache are preserved.
 ## License
 
 Released under the MIT License.
+
+## Command version
+
+```bash
+dynamic-wallpaper --version
+```
+
+## Architecture
+
+The CLI loads and validates configuration, then delegates orchestration to
+`WallpaperEngine`. The engine coordinates four focused components:
+
+1. `metadata.py` decodes Apple's embedded `apple_desktop:h24` data.
+2. `cache.py` extracts HEIC frames and reuses a source-aware cache.
+3. `scheduler.py` maps the current time to the correct frame.
+4. `plasma.py` applies the selected image through Plasma's D-Bus interface.
+
+`state.py` records the last applied frame so routine timer runs can avoid
+redundant desktop updates.
+
+## Development
+
+Create an isolated environment and install the project with development tools:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+Run the standard checks:
+
+```bash
+python -m ruff check .
+python -m ruff format --check .
+python -m pytest
+python -m pytest --cov=dynamic_wallpaper --cov-report=term-missing
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for package-build and pull-request
+checks.
+
+## Troubleshooting
+
+### Configuration file not found
+
+Create `~/.config/dynamic-wallpaper/config` from `config/config.example` and
+confirm both required paths are set.
+
+### `exiftool` or `heif-convert` not found
+
+Install the Ubuntu/Kubuntu dependencies listed under Requirements, then verify:
+
+```bash
+exiftool -ver
+heif-convert --help
+```
+
+### `qdbus6` not found or Plasma rejects the update
+
+Confirm the command is installed and run the program from the active Plasma
+user session. Inspect the service log with:
+
+```bash
+journalctl --user -u dynamic-wallpaper.service -n 50
+```
+
+### A wallpaper change is not detected
+
+Run once with `--force`. If the source HEIC was replaced without its timestamp
+changing, remove its frame cache directory and run `--extract` again.
+
+## FAQ
+
+### Does this modify the original HEIC file?
+
+No. Frames and state are written only to the configured cache location.
+
+### Does it require root access?
+
+No. Installation, the systemd timer, cache, and Plasma update all run as the
+current user.
+
+### Why does the timer run every five minutes?
+
+The embedded schedule selects discrete frames. Frequent lightweight checks keep
+the desktop near the intended transition time, while state tracking prevents
+unnecessary reapplication.
