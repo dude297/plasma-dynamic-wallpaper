@@ -9,8 +9,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- `dynamic-wallpaper --config` output for the active configuration file, HEIC source, and cache directory.
 - `dynamic-wallpaper --doctor` readiness checks for dependencies, configuration, wallpaper access, and cache-directory availability.
 - `dynamic-wallpaper --status` reporting for the last successfully applied frame, timestamp, and cached wallpaper availability.
+
+### Changed
+
+- Primary CLI information actions are now mutually exclusive to prevent ambiguous command combinations.
 
 ## [0.1.0] - 2026-07-24
 

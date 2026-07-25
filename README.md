@@ -61,6 +61,7 @@ CACHE_DIR="$HOME/.cache/dynamic-wallpaper/Fuji"
 ```bash
 dynamic-wallpaper                 # Apply wallpaper
 dynamic-wallpaper --schedule      # Show Apple schedule
+dynamic-wallpaper --config        # Show active configuration paths
 dynamic-wallpaper --status        # Show last applied wallpaper
 dynamic-wallpaper --inspect       # View decoded metadata
 dynamic-wallpaper --extract       # Extract frames only
@@ -68,6 +69,17 @@ dynamic-wallpaper --dry-run       # Preview selected frame
 dynamic-wallpaper --at 18:00 --dry-run
 dynamic-wallpaper --force
 ```
+
+### Inspect active configuration
+
+Show the configuration file and the resolved HEIC and cache paths:
+
+```bash
+dynamic-wallpaper --config
+```
+
+Primary information commands are mutually exclusive. For example,
+`--status --schedule` is rejected instead of silently choosing one action.
 
 ### Check installation health
 

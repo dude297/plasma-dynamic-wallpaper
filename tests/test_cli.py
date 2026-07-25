@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -57,6 +58,7 @@ def test_build_parser_exposes_expected_options() -> None:
     for option in (
         "--version",
         "--doctor",
+        "--config",
         "--status",
         "--inspect",
         "--schedule",
@@ -66,6 +68,44 @@ def test_build_parser_exposes_expected_options() -> None:
         "--force",
     ):
         assert option in help_text
+
+
+def test_parser_rejects_multiple_primary_actions() -> None:
+    parser = cli.build_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--status", "--schedule"])
+
+
+def test_main_prints_active_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config = Config(
+        heic_file=Path("/wallpapers/Fuji.heic"),
+        cache_dir=Path("/cache/Fuji"),
+    )
+
+    monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper", "--config"])
+    monkeypatch.setattr(cli, "load_config", Mock(return_value=config))
+    monkeypatch.setattr(cli, "validate_config", Mock())
+    monkeypatch.setattr(
+        cli,
+        "config_path",
+        Mock(return_value="/config/dynamic-wallpaper/config"),
+    )
+    engine_type = Mock()
+    monkeypatch.setattr(cli, "WallpaperEngine", engine_type)
+
+    result = cli.main()
+
+    assert result == 0
+    assert capsys.readouterr().out == (
+        "Configuration file: /config/dynamic-wallpaper/config\n"
+        "Source HEIC: /wallpapers/Fuji.heic\n"
+        "Cache directory: /cache/Fuji\n"
+    )
+    engine_type.assert_not_called()
 
 
 def run_main_with_engine(

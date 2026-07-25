@@ -30,15 +30,20 @@ def _parse_assignment(line: str) -> tuple[str, str] | None:
     return key, value
 
 
+def config_path() -> Path:
+    """Return the active user configuration path."""
+    config_home = Path(
+        os.environ.get(
+            "XDG_CONFIG_HOME",
+            Path.home() / ".config",
+        )
+    )
+    return config_home / "dynamic-wallpaper" / "config"
+
+
 def load_config(path: Path | None = None) -> Config:
     if path is None:
-        config_home = Path(
-            os.environ.get(
-                "XDG_CONFIG_HOME",
-                Path.home() / ".config",
-            )
-        )
-        path = config_home / "dynamic-wallpaper" / "config"
+        path = config_path()
 
     if not path.is_file():
         raise FileNotFoundError(f"Configuration file not found: {path}")

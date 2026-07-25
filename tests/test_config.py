@@ -1,12 +1,14 @@
 """Tests for dynamic wallpaper configuration loading."""
 
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
 from dynamic_wallpaper.config import (
     Config,
     _parse_assignment,
+    config_path,
     load_config,
     validate_config,
 )
@@ -140,3 +142,22 @@ def test_validate_config_rejects_cache_file(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="CACHE_DIR must point"):
         validate_config(config)
+
+
+def test_config_path_uses_xdg_config_home(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+    assert config_path() == tmp_path / "dynamic-wallpaper" / "config"
+
+
+def test_config_path_defaults_to_user_config_directory(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    monkeypatch.setattr(Path, "home", Mock(return_value=tmp_path))
+
+    assert config_path() == tmp_path / ".config/dynamic-wallpaper/config"

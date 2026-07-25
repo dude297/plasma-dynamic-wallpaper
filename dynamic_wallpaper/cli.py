@@ -8,7 +8,7 @@ from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
 
 from .cache import CacheError
-from .config import load_config, validate_config
+from .config import config_path, load_config, validate_config
 from .diagnostics import run_diagnostics
 from .engine import WallpaperEngine
 from .metadata import MetadataError
@@ -54,27 +54,33 @@ def build_parser() -> argparse.ArgumentParser:
         action="version",
         version=f"%(prog)s {_package_version()}",
     )
-    parser.add_argument(
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument(
         "--doctor",
         action="store_true",
         help="check configuration and runtime dependencies",
     )
-    parser.add_argument(
+    actions.add_argument(
+        "--config",
+        action="store_true",
+        help="show the active configuration and resolved paths",
+    )
+    actions.add_argument(
         "--status",
         action="store_true",
         help="show the last successfully applied wallpaper",
     )
-    parser.add_argument(
+    actions.add_argument(
         "--inspect",
         action="store_true",
         help="print the decoded Apple metadata",
     )
-    parser.add_argument(
+    actions.add_argument(
         "--schedule",
         action="store_true",
         help="print the embedded 24-hour schedule",
     )
-    parser.add_argument(
+    actions.add_argument(
         "--extract",
         action="store_true",
         help="extract and cache frames without changing wallpaper",
@@ -111,6 +117,13 @@ def main() -> int:
     try:
         config = load_config()
         validate_config(config)
+
+        if args.config:
+            print(f"Configuration file: {config_path()}")
+            print(f"Source HEIC: {config.heic_file}")
+            print(f"Cache directory: {config.cache_dir}")
+            return 0
+
         engine = WallpaperEngine(config)
 
         if args.status:
