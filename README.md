@@ -41,6 +41,12 @@ cd plasma-dynamic-wallpaper
 
 chmod +x install.sh
 ./install.sh
+
+# Non-interactive install
+./install.sh --yes
+
+# Install files without enabling the timer
+./install.sh --no-enable
 ```
 
 Configure:
@@ -161,7 +167,14 @@ git pull
 ./uninstall.sh
 ```
 
-User configuration and cache are preserved.
+User configuration and cache are preserved by default. To remove them too:
+
+```bash
+./uninstall.sh --purge
+```
+
+Both scripts prompt before making changes. Pass `--yes` for unattended use.
+Existing configuration is backed up before every reinstall.
 
 ## Roadmap
 

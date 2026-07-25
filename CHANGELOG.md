@@ -9,6 +9,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Safer installer with dependency aggregation, confirmation prompts, `--yes`,
+  `--no-enable`, user-systemd validation, and timestamped config backups.
+- Safer uninstaller with confirmation prompts, `--yes`, and optional `--purge`
+  removal of configuration and cached frames.
+- Script interface tests for help and invalid options.
+
+### Added
+
 - `dynamic-wallpaper --cache-status` reporting for cache freshness and extracted frame count.
 - `dynamic-wallpaper --rebuild-cache` for forced frame re-extraction without manual cache deletion.
 - `dynamic-wallpaper --config` output for the active configuration file, HEIC source, and cache directory.
