@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +49,7 @@ def save_state(
     state = {
         "wallpaper": str(wallpaper.resolve()),
         "frame_index": frame_index,
+        "applied_at": datetime.now(timezone.utc).isoformat(),
     }
 
     temporary_path = path.with_suffix(".tmp")

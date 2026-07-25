@@ -61,6 +61,7 @@ CACHE_DIR="$HOME/.cache/dynamic-wallpaper/Fuji"
 ```bash
 dynamic-wallpaper                 # Apply wallpaper
 dynamic-wallpaper --schedule      # Show Apple schedule
+dynamic-wallpaper --status        # Show last applied wallpaper
 dynamic-wallpaper --inspect       # View decoded metadata
 dynamic-wallpaper --extract       # Extract frames only
 dynamic-wallpaper --dry-run       # Preview selected frame
@@ -161,8 +162,9 @@ The CLI loads and validates configuration, then delegates orchestration to
 3. `scheduler.py` maps the current time to the correct frame.
 4. `plasma.py` applies the selected image through Plasma's D-Bus interface.
 
-`state.py` records the last applied frame so routine timer runs can avoid
-redundant desktop updates.
+`state.py` records the last applied frame and UTC application time so routine
+timer runs can avoid redundant desktop updates and `--status` can report the
+last successful change.
 
 ## Development
 

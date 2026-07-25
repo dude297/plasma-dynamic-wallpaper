@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -219,3 +220,35 @@ def test_force_applies_even_when_frame_is_current(tmp_path: Path) -> None:
 def test_json_default_rejects_unsupported_values() -> None:
     with pytest.raises(TypeError, match="Cannot serialize object"):
         _json_default(object())
+
+
+def test_status_reports_missing_state(tmp_path: Path) -> None:
+    config = Config(tmp_path / "wallpaper.heic", tmp_path / "cache" / "frames")
+    engine = WallpaperEngine(config)
+
+    assert engine.status()[-1] == "Last applied: no recorded wallpaper"
+
+
+def test_status_reports_persisted_wallpaper(tmp_path: Path) -> None:
+    wallpaper = tmp_path / "frame.png"
+    wallpaper.write_bytes(b"png")
+    config = Config(tmp_path / "wallpaper.heic", tmp_path / "cache" / "frames")
+    engine = WallpaperEngine(config)
+    engine.state_file.parent.mkdir(parents=True)
+    engine.state_file.write_text(
+        json.dumps(
+            {
+                "wallpaper": str(wallpaper),
+                "frame_index": 3,
+                "applied_at": "2026-07-24T20:30:00+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    lines = engine.status()
+
+    assert "Last wallpaper: " + str(wallpaper) in lines
+    assert "Last frame: 3" in lines
+    assert "Applied at: 2026-07-24T20:30:00+00:00" in lines
+    assert "Wallpaper file: present" in lines

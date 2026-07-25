@@ -57,6 +57,7 @@ def test_build_parser_exposes_expected_options() -> None:
     for option in (
         "--version",
         "--doctor",
+        "--status",
         "--inspect",
         "--schedule",
         "--extract",
@@ -118,6 +119,26 @@ def test_main_returns_failure_for_unhealthy_diagnostics(
 
     assert result == 1
     assert capsys.readouterr().out == ("[FAIL] qdbus6: not found in PATH\n")
+
+
+def test_main_prints_status(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.status.return_value = [
+        "Last wallpaper: /cache/frame-2.png",
+        "Last frame: 2",
+    ]
+
+    result, _ = run_main_with_engine(monkeypatch, ["--status"], engine)
+
+    assert result == 0
+    assert capsys.readouterr().out == (
+        "Last wallpaper: /cache/frame-2.png\nLast frame: 2\n"
+    )
+    engine.status.assert_called_once_with()
+    engine.apply.assert_not_called()
 
 
 def test_main_inspects_metadata(

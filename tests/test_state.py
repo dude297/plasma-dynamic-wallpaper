@@ -71,10 +71,10 @@ def test_save_state_creates_parent_and_atomically_replaces_file(
 
     save_state(state_file, wallpaper, 4)
 
-    assert json.loads(state_file.read_text(encoding="utf-8")) == {
-        "wallpaper": str(wallpaper.resolve()),
-        "frame_index": 4,
-    }
+    saved = json.loads(state_file.read_text(encoding="utf-8"))
+    assert saved["wallpaper"] == str(wallpaper.resolve())
+    assert saved["frame_index"] == 4
+    assert saved["applied_at"].endswith("+00:00")
     assert state_file.read_text(encoding="utf-8").endswith("\n")
     assert state_file.with_suffix(".tmp").exists() is False
 

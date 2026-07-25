@@ -12,7 +12,7 @@ from .config import Config
 from .metadata import decode_h24
 from .plasma import set_wallpaper
 from .scheduler import format_schedule, select_frame
-from .state import is_current, save_state
+from .state import is_current, load_state, save_state
 
 
 class WallpaperEngine:
@@ -51,6 +51,38 @@ class WallpaperEngine:
     def state_file(self) -> Path:
         """Return the state file shared by the active wallpaper cache."""
         return self.config.cache_dir.parent / "state.json"
+
+    def status(self) -> list[str]:
+        """Return the persisted status of the last wallpaper update."""
+        state = load_state(self.state_file)
+        wallpaper = state.get("wallpaper")
+        frame_index = state.get("frame_index")
+        applied_at = state.get("applied_at")
+
+        lines = [
+            f"Source HEIC: {self.config.heic_file}",
+            f"Cache directory: {self.config.cache_dir}",
+            f"State file: {self.state_file}",
+        ]
+
+        if not isinstance(wallpaper, str):
+            lines.append("Last applied: no recorded wallpaper")
+            return lines
+
+        lines.append(f"Last wallpaper: {wallpaper}")
+        lines.append(
+            "Last frame: "
+            + (str(frame_index) if isinstance(frame_index, int) else "unknown")
+        )
+        lines.append(
+            "Applied at: "
+            + (applied_at if isinstance(applied_at, str) else "unknown")
+        )
+        lines.append(
+            "Wallpaper file: "
+            + ("present" if Path(wallpaper).is_file() else "missing")
+        )
+        return lines
 
     def inspect(self) -> str:
         """Return decoded metadata as formatted JSON."""

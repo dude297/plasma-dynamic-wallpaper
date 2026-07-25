@@ -10,6 +10,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Added
 
 - `dynamic-wallpaper --doctor` readiness checks for dependencies, configuration, wallpaper access, and cache-directory availability.
+- `dynamic-wallpaper --status` reporting for the last successfully applied frame, timestamp, and cached wallpaper availability.
 
 ## [0.1.0] - 2026-07-24
 

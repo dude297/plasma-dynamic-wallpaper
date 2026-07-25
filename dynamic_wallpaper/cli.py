@@ -60,6 +60,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="check configuration and runtime dependencies",
     )
     parser.add_argument(
+        "--status",
+        action="store_true",
+        help="show the last successfully applied wallpaper",
+    )
+    parser.add_argument(
         "--inspect",
         action="store_true",
         help="print the decoded Apple metadata",
@@ -107,6 +112,11 @@ def main() -> int:
         config = load_config()
         validate_config(config)
         engine = WallpaperEngine(config)
+
+        if args.status:
+            for line in engine.status():
+                print(line)
+            return 0
 
         if args.inspect:
             print(engine.inspect())
