@@ -107,9 +107,7 @@ def _verify_wallpaper_response(output: str, expected_uri: str) -> None:
         raise PlasmaError("Plasma did not report any updated desktops")
 
     mismatches = [
-        record
-        for record in records
-        if record.get("image") != expected_uri
+        record for record in records if record.get("image") != expected_uri
     ]
     if mismatches:
         details = ", ".join(
