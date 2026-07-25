@@ -56,6 +56,7 @@ def test_build_parser_exposes_expected_options() -> None:
 
     for option in (
         "--version",
+        "--doctor",
         "--inspect",
         "--schedule",
         "--extract",
@@ -83,6 +84,40 @@ def run_main_with_engine(
     monkeypatch.setattr(cli, "WallpaperEngine", engine_type)
 
     return cli.main(), engine_type
+
+
+def test_main_runs_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper", "--doctor"])
+    monkeypatch.setattr(
+        cli,
+        "run_diagnostics",
+        Mock(return_value=(["[OK] Python: 3.14.4"], True)),
+    )
+
+    result = cli.main()
+
+    assert result == 0
+    assert capsys.readouterr().out == "[OK] Python: 3.14.4\n"
+
+
+def test_main_returns_failure_for_unhealthy_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper", "--doctor"])
+    monkeypatch.setattr(
+        cli,
+        "run_diagnostics",
+        Mock(return_value=(["[FAIL] qdbus6: not found in PATH"], False)),
+    )
+
+    result = cli.main()
+
+    assert result == 1
+    assert capsys.readouterr().out == ("[FAIL] qdbus6: not found in PATH\n")
 
 
 def test_main_inspects_metadata(

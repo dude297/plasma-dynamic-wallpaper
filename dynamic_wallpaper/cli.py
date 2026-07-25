@@ -9,6 +9,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .cache import CacheError
 from .config import load_config, validate_config
+from .diagnostics import run_diagnostics
 from .engine import WallpaperEngine
 from .metadata import MetadataError
 from .plasma import PlasmaError
@@ -54,6 +55,11 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {_package_version()}",
     )
     parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="check configuration and runtime dependencies",
+    )
+    parser.add_argument(
         "--inspect",
         action="store_true",
         help="print the decoded Apple metadata",
@@ -90,6 +96,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
+
+    if args.doctor:
+        lines, healthy = run_diagnostics()
+        for line in lines:
+            print(line)
+        return 0 if healthy else 1
 
     try:
         config = load_config()

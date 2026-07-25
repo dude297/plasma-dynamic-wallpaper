@@ -68,6 +68,19 @@ dynamic-wallpaper --at 18:00 --dry-run
 dynamic-wallpaper --force
 ```
 
+### Check installation health
+
+Run the built-in readiness check before enabling the timer or when a scheduled
+update fails:
+
+```bash
+dynamic-wallpaper --doctor
+```
+
+The command checks the Python version, required executables, configuration,
+HEIC source file, and cache-directory readiness. It exits with status 1 when
+any required check fails, so it can also be used in scripts.
+
 ## Systemd
 
 The installer enables a user timer that updates the wallpaper every five minutes.
