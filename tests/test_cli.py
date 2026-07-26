@@ -419,6 +419,5 @@ def test_main_reports_log_file_setup_failure(
 
     assert cli.main() == 1
     assert (
-        "could not open log file: permission denied"
-        in capsys.readouterr().err
+        "could not open log file: permission denied" in capsys.readouterr().err
     )

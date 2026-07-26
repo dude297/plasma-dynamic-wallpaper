@@ -45,8 +45,7 @@ def test_log_file_creates_parent_and_records_info(tmp_path: Path) -> None:
 
     assert log_file.is_file()
     assert (
-        "INFO dynamic_wallpaper.test: selected frame 2"
-        in log_file.read_text()
+        "INFO dynamic_wallpaper.test: selected frame 2" in log_file.read_text()
     )
 
 
