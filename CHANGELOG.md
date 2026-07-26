@@ -9,6 +9,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- `--verbose` diagnostics covering configuration, cache preparation, frame
+  selection, Plasma DBus verification, and operation timing.
+- `--log-file PATH` for persistent INFO/DEBUG troubleshooting logs with
+  automatic parent-directory creation.
+
+### Changed
+
+- Plasma wallpaper updates now emit read-back counts and elapsed timing through
+  the application logger.
+
+### Added
+
 - Safer installer with dependency aggregation, confirmation prompts, `--yes`,
   `--no-enable`, user-systemd validation, and timestamped config backups.
 - Safer uninstaller with confirmation prompts, `--yes`, and optional `--purge`

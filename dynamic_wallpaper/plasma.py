@@ -6,6 +6,13 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from time import perf_counter
+from uuid import uuid4
+
+from .logging import get_logger
+
+
+logger = get_logger("plasma")
 
 
 class PlasmaError(RuntimeError):
@@ -13,7 +20,12 @@ class PlasmaError(RuntimeError):
 
 
 def set_wallpaper(image_path: Path) -> None:
-    """Apply *image_path* to every Plasma desktop and verify the write."""
+    """Apply *image_path* to every Plasma desktop and verify the write.
+
+    Plasma can retain the requested configuration while its renderer continues
+    showing a stale or default image.  A unique alias gives each application a
+    fresh file URI, invalidating that renderer cache without restarting Plasma.
+    """
     if not image_path.is_file():
         raise PlasmaError(f"Wallpaper image was not found: {image_path}")
 
@@ -22,7 +34,8 @@ def set_wallpaper(image_path: Path) -> None:
     if qdbus is None:
         raise PlasmaError("qdbus6 was not found")
 
-    wallpaper_uri = image_path.resolve().as_uri()
+    render_path = _create_render_alias(image_path)
+    wallpaper_uri = render_path.resolve().as_uri()
     encoded_uri = json.dumps(wallpaper_uri)
 
     # Plasma can persist the new Image value without repainting the desktop.
@@ -58,6 +71,10 @@ for (let index = 0; index < allDesktops.length; index++) {{
 }}
 """.strip()
 
+    logger.info("Requesting Plasma wallpaper update: %s", wallpaper_uri)
+    logger.debug("Plasma evaluateScript payload:\n%s", script)
+    started = perf_counter()
+
     try:
         completed = subprocess.run(
             [
@@ -77,10 +94,56 @@ for (let index = 0; index < allDesktops.length; index++) {{
             message or "Plasma rejected the wallpaper update"
         ) from exc
 
-    _verify_wallpaper_response(completed.stdout, wallpaper_uri)
+    elapsed_ms = (perf_counter() - started) * 1000
+    logger.debug("Raw Plasma verification response: %r", completed.stdout)
+    records = _verify_wallpaper_response(completed.stdout, wallpaper_uri)
+    logger.info(
+        "Plasma verified %d desktop(s) in %.1f ms",
+        len(records),
+        elapsed_ms,
+    )
 
 
-def _verify_wallpaper_response(output: str, expected_uri: str) -> None:
+def _create_render_alias(image_path: Path) -> Path:
+    """Create a unique alias so Plasma receives a fresh URI every time."""
+    render_dir = image_path.parent / ".plasma-render"
+    render_dir.mkdir(parents=True, exist_ok=True)
+
+    alias = render_dir / (
+        f"{image_path.stem}-{uuid4().hex}{image_path.suffix}"
+    )
+
+    try:
+        alias.hardlink_to(image_path)
+    except OSError:
+        shutil.copy2(image_path, alias)
+
+    _prune_render_aliases(render_dir, keep=8)
+    logger.debug("Created Plasma render alias: %s", alias)
+    return alias
+
+
+def _prune_render_aliases(render_dir: Path, *, keep: int) -> None:
+    """Retain only the newest render aliases."""
+    aliases = sorted(
+        (path for path in render_dir.iterdir() if path.is_file()),
+        key=lambda path: path.stat().st_mtime_ns,
+        reverse=True,
+    )
+
+    for stale in aliases[keep:]:
+        try:
+            stale.unlink()
+        except OSError:
+            logger.debug(
+                "Could not remove stale Plasma render alias: %s",
+                stale,
+            )
+
+
+def _verify_wallpaper_response(
+    output: str, expected_uri: str
+) -> list[dict[str, object]]:
     """Verify that every desktop reports the requested wallpaper URI."""
     records: list[dict[str, object]] = []
 
@@ -117,3 +180,5 @@ def _verify_wallpaper_response(output: str, expected_uri: str) -> None:
         raise PlasmaError(
             "Plasma did not retain the requested wallpaper: " + details
         )
+
+    return records

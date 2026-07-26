@@ -6,15 +6,20 @@ import argparse
 import sys
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 from .cache import CacheError
 from .config import config_path, load_config, validate_config
 from .diagnostics import run_diagnostics
 from .engine import WallpaperEngine
+from .logging import configure_logging, get_logger
 from .metadata import MetadataError
 from .plasma import PlasmaError
 from .scheduler import ScheduleError
 from .state import StateError
+
+
+logger = get_logger("cli")
 
 
 def _package_version() -> str:
@@ -107,6 +112,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="show the selected frame without applying it",
     )
     parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="show detailed diagnostic and timing information",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=Path,
+        metavar="PATH",
+        help="write diagnostic logs to PATH",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="apply the wallpaper even if it is already current",
@@ -117,6 +133,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
+
+    try:
+        configure_logging(verbose=args.verbose, log_file=args.log_file)
+    except OSError as exc:
+        print(
+            f"dynamic-wallpaper: could not open log file: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    logger.debug("CLI arguments: %s", vars(args))
 
     if args.doctor:
         lines, healthy = run_diagnostics()
@@ -180,6 +207,7 @@ def main() -> int:
         return 0
 
     except KeyboardInterrupt:
+        logger.warning("Operation interrupted by user")
         print(
             "dynamic-wallpaper: operation interrupted; existing cache preserved",
             file=sys.stderr,
@@ -194,6 +222,7 @@ def main() -> int:
         StateError,
         ValueError,
     ) as exc:
+        logger.error("Command failed: %s", exc)
         print(f"dynamic-wallpaper: {exc}", file=sys.stderr)
         return 1
 

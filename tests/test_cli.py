@@ -67,6 +67,8 @@ def test_build_parser_exposes_expected_options() -> None:
         "--extract",
         "--at HH:MM",
         "--dry-run",
+        "--verbose",
+        "--log-file PATH",
         "--force",
     ):
         assert option in help_text
@@ -377,3 +379,46 @@ def test_main_handles_interrupted_rebuild(
     assert captured.out == ""
     assert "Rebuilding cache" in captured.err
     assert "operation interrupted; existing cache preserved" in captured.err
+
+
+def test_main_configures_verbose_file_logging(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    engine.apply.return_value = []
+    configure = Mock()
+    monkeypatch.setattr(cli, "configure_logging", configure)
+
+    result, _ = run_main_with_engine(
+        monkeypatch,
+        ["--verbose", "--log-file", "/tmp/dynamic.log"],
+        engine,
+    )
+
+    assert result == 0
+    configure.assert_called_once_with(
+        verbose=True,
+        log_file=Path("/tmp/dynamic.log"),
+    )
+
+
+def test_main_reports_log_file_setup_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["dynamic-wallpaper", "--log-file", "/bad/log"],
+    )
+    monkeypatch.setattr(
+        cli,
+        "configure_logging",
+        Mock(side_effect=PermissionError("permission denied")),
+    )
+
+    assert cli.main() == 1
+    assert (
+        "could not open log file: permission denied"
+        in capsys.readouterr().err
+    )

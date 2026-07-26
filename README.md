@@ -291,3 +291,27 @@ coverage, build validation, and installed-command smoke tests before publishing.
 
 PyPI publishing is not enabled yet. See [CONTRIBUTING.md](CONTRIBUTING.md) for
 the maintainer release checklist.
+
+### Diagnostic logging
+
+Use `--verbose` to show detailed cache, frame-selection, Plasma DBus, and timing
+information on stderr:
+
+```bash
+dynamic-wallpaper --force --verbose
+```
+
+Use `--log-file` to retain diagnostics across scheduled or manual runs. Parent
+directories are created automatically:
+
+```bash
+dynamic-wallpaper --force --log-file ~/.local/state/dynamic-wallpaper/run.log
+```
+
+Combine both options to include debug details such as the exact Plasma script
+and read-back response in the log file:
+
+```bash
+dynamic-wallpaper --force --verbose \
+  --log-file ~/.local/state/dynamic-wallpaper/run.log
+```

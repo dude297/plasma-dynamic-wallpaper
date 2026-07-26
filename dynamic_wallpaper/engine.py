@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from time import perf_counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -14,10 +15,14 @@ from .cache import (
     prepare_frames,
 )
 from .config import Config
+from .logging import get_logger
 from .metadata import decode_h24
 from .plasma import set_wallpaper
 from .scheduler import format_schedule, select_frame
 from .state import is_current, load_state, save_state
+
+
+logger = get_logger("engine")
 
 
 class WallpaperEngine:
@@ -37,7 +42,13 @@ class WallpaperEngine:
                     f"HEIC wallpaper not found: {self.config.heic_file}"
                 )
 
+            started = perf_counter()
+            logger.info("Decoding HEIC metadata: %s", self.config.heic_file)
             self._metadata = decode_h24(self.config.heic_file)
+            logger.info(
+                "Metadata decoded in %.1f ms",
+                (perf_counter() - started) * 1000,
+            )
 
         return self._metadata
 
@@ -45,9 +56,20 @@ class WallpaperEngine:
     def frames(self) -> list[Path]:
         """Prepare and cache extracted wallpaper frames."""
         if self._frames is None:
+            started = perf_counter()
+            logger.info(
+                "Preparing frame cache: source=%s cache=%s",
+                self.config.heic_file,
+                self.config.cache_dir,
+            )
             self._frames = prepare_frames(
                 self.config.heic_file,
                 self.config.cache_dir,
+            )
+            logger.info(
+                "Prepared %d frame(s) in %.1f ms",
+                len(self._frames),
+                (perf_counter() - started) * 1000,
             )
 
         return self._frames
@@ -104,9 +126,16 @@ class WallpaperEngine:
 
     def rebuild_cache(self) -> str:
         """Force frame extraction even when the cache appears current."""
+        started = perf_counter()
+        logger.info("Forcing cache rebuild: %s", self.config.cache_dir)
         self._frames = extract_frames(
             self.config.heic_file,
             self.config.cache_dir,
+        )
+        logger.info(
+            "Cache rebuild completed with %d frame(s) in %.1f ms",
+            len(self._frames),
+            (perf_counter() - started) * 1000,
         )
         return (
             f"Rebuilt {len(self._frames)} frame(s) in {self.config.cache_dir}"
@@ -153,16 +182,26 @@ class WallpaperEngine:
         force: bool = False,
     ) -> list[str]:
         """Select and optionally apply the correct wallpaper frame."""
+        operation_started = perf_counter()
+        selection_started = perf_counter()
         index, wallpaper, entry = select_frame(
             self.frames,
             self.metadata,
             selected_time,
+        )
+        logger.info(
+            "Selected frame %d (%s) for %s in %.1f ms",
+            index,
+            wallpaper,
+            selected_time.isoformat(),
+            (perf_counter() - selection_started) * 1000,
         )
 
         last_index = len(self.frames) - 1
         output: list[str] = []
 
         if dry_run:
+            logger.info("Dry run; wallpaper will not be changed")
             action = (
                 "Would keep"
                 if is_current(self.state_file, wallpaper)
@@ -170,12 +209,24 @@ class WallpaperEngine:
             )
             output.append(f"{action} frame {index}/{last_index}: {wallpaper}")
         elif not force and is_current(self.state_file, wallpaper):
+            logger.info("Skipping frame because persisted state is current")
             output.append(
                 f"Skipped frame {index}/{last_index}: already applied"
             )
         else:
+            apply_started = perf_counter()
+            logger.info(
+                "Applying wallpaper%s: %s",
+                " (forced)" if force else "",
+                wallpaper,
+            )
             set_wallpaper(wallpaper)
+            logger.info(
+                "Plasma wallpaper update completed in %.1f ms",
+                (perf_counter() - apply_started) * 1000,
+            )
             save_state(self.state_file, wallpaper, index)
+            logger.debug("Saved state to %s", self.state_file)
             output.append(f"Applied frame {index}/{last_index}: {wallpaper}")
 
         start_hour, start_minute = divmod(entry.minutes, 60)
@@ -184,6 +235,10 @@ class WallpaperEngine:
             f"{start_hour:02d}:{start_minute:02d}"
         )
 
+        logger.info(
+            "Wallpaper operation completed in %.1f ms",
+            (perf_counter() - operation_started) * 1000,
+        )
         return output
 
 

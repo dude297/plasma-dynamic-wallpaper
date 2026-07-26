@@ -56,6 +56,10 @@ def test_set_wallpaper_invokes_plasma_shell(tmp_path: Path) -> None:
             return_value="/usr/bin/qdbus6",
         ),
         patch(
+            "dynamic_wallpaper.plasma._create_render_alias",
+            return_value=image,
+        ),
+        patch(
             "dynamic_wallpaper.plasma.subprocess.run",
             return_value=_successful_response(image),
         ) as run,
@@ -111,6 +115,10 @@ def test_set_wallpaper_accepts_multiple_verified_desktops(
         patch(
             "dynamic_wallpaper.plasma.shutil.which",
             return_value="/usr/bin/qdbus6",
+        ),
+        patch(
+            "dynamic_wallpaper.plasma._create_render_alias",
+            return_value=image,
         ),
         patch(
             "dynamic_wallpaper.plasma.subprocess.run",
@@ -291,3 +299,63 @@ def test_set_wallpaper_uses_generic_message_for_empty_failure(
         ),
     ):
         set_wallpaper(image)
+
+
+def test_verify_wallpaper_response_returns_verified_records(
+    tmp_path: Path,
+) -> None:
+    image = tmp_path / "wallpaper.png"
+    uri = image.resolve().as_uri()
+    output = "\n".join(
+        [
+            json.dumps({"id": 1, "screen": 0, "image": uri}),
+            json.dumps({"id": 2, "screen": 1, "image": uri}),
+        ]
+    )
+
+    from dynamic_wallpaper.plasma import _verify_wallpaper_response
+
+    records = _verify_wallpaper_response(output, uri)
+
+    assert [record["id"] for record in records] == [1, 2]
+
+
+def test_create_render_alias_uses_unique_hard_link(tmp_path: Path) -> None:
+    from dynamic_wallpaper.plasma import _create_render_alias
+
+    image = tmp_path / "wallpaper.png"
+    image.write_bytes(b"wallpaper")
+
+    first = _create_render_alias(image)
+    second = _create_render_alias(image)
+
+    assert first != second
+    assert first.parent == tmp_path / ".plasma-render"
+    assert first.read_bytes() == b"wallpaper"
+    assert second.read_bytes() == b"wallpaper"
+    assert first.stat().st_ino == image.stat().st_ino
+
+
+def test_create_render_alias_falls_back_to_copy(tmp_path: Path) -> None:
+    from dynamic_wallpaper.plasma import _create_render_alias
+
+    image = tmp_path / "wallpaper.png"
+    image.write_bytes(b"wallpaper")
+
+    with patch.object(Path, "hardlink_to", side_effect=OSError("no link")):
+        alias = _create_render_alias(image)
+
+    assert alias.read_bytes() == b"wallpaper"
+
+
+def test_create_render_alias_prunes_old_entries(tmp_path: Path) -> None:
+    from dynamic_wallpaper.plasma import _create_render_alias
+
+    image = tmp_path / "wallpaper.png"
+    image.write_bytes(b"wallpaper")
+
+    for _ in range(12):
+        _create_render_alias(image)
+
+    aliases = list((tmp_path / ".plasma-render").iterdir())
+    assert len(aliases) == 8
