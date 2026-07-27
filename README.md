@@ -201,8 +201,10 @@ The CLI loads and validates configuration, then delegates orchestration to
 
 1. `metadata.py` decodes Apple's embedded `apple_desktop:h24` data.
 2. `cache.py` extracts HEIC frames and reuses a source-aware cache.
-3. `scheduler.py` maps the current time to the correct frame.
-4. `plasma.py` applies the selected image through Plasma's D-Bus interface.
+3. `metadata.py` persists decoded Apple metadata and invalidates it when the
+   source HEIC changes.
+4. `scheduler.py` maps the current time to the correct frame.
+5. `plasma.py` applies the selected image through Plasma's D-Bus interface.
 
 `state.py` records the last applied frame and UTC application time so routine
 timer runs can avoid redundant desktop updates and `--status` can report the

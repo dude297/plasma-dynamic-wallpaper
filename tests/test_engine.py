@@ -35,13 +35,16 @@ def test_metadata_is_decoded_only_once(tmp_path: Path) -> None:
     metadata = {"ti": [{"t": 0.0, "i": 0}]}
 
     with patch(
-        "dynamic_wallpaper.engine.decode_h24",
+        "dynamic_wallpaper.engine.load_h24_metadata",
         return_value=metadata,
     ) as decode:
         assert engine.metadata is metadata
         assert engine.metadata is metadata
 
-    decode.assert_called_once_with(engine.config.heic_file)
+    decode.assert_called_once_with(
+        engine.config.heic_file,
+        engine.config.cache_dir,
+    )
 
 
 def test_frames_are_prepared_only_once(tmp_path: Path) -> None:

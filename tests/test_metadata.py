@@ -232,3 +232,68 @@ def test_decode_h24_rejects_malformed_binary_plist() -> None:
         pytest.raises(MetadataError, match="Could not parse"),
     ):
         decode_h24(HEIC_FILE)
+
+
+def test_load_h24_metadata_reuses_valid_disk_cache(tmp_path: Path) -> None:
+    from dynamic_wallpaper.metadata import load_h24_metadata
+
+    heic_file = tmp_path / "wallpaper.heic"
+    cache_dir = tmp_path / "cache"
+    heic_file.write_bytes(b"heic")
+    metadata = {"ti": [{"t": 0.0, "i": 0}]}
+
+    with patch(
+        "dynamic_wallpaper.metadata.decode_h24",
+        return_value=metadata,
+    ) as decode:
+        assert load_h24_metadata(heic_file, cache_dir) == metadata
+        assert load_h24_metadata(heic_file, cache_dir) == metadata
+
+    decode.assert_called_once_with(heic_file)
+
+
+def test_load_h24_metadata_invalidates_when_source_changes(
+    tmp_path: Path,
+) -> None:
+    from dynamic_wallpaper.metadata import load_h24_metadata
+
+    heic_file = tmp_path / "wallpaper.heic"
+    cache_dir = tmp_path / "cache"
+    heic_file.write_bytes(b"first")
+
+    with patch(
+        "dynamic_wallpaper.metadata.decode_h24",
+        side_effect=[{"generation": 1}, {"generation": 2}],
+    ) as decode:
+        assert load_h24_metadata(heic_file, cache_dir) == {"generation": 1}
+        heic_file.write_bytes(b"second-generation")
+        assert load_h24_metadata(heic_file, cache_dir) == {"generation": 2}
+
+    assert decode.call_count == 2
+
+
+def test_load_h24_metadata_recovers_from_corrupt_cache(
+    tmp_path: Path,
+) -> None:
+    from dynamic_wallpaper.metadata import (
+        _source_fingerprint,
+        load_h24_metadata,
+    )
+
+    heic_file = tmp_path / "wallpaper.heic"
+    cache_dir = tmp_path / "cache"
+    heic_file.write_bytes(b"heic")
+    cache_dir.mkdir()
+    (cache_dir / ".metadata.plist").write_bytes(b"not-a-plist")
+    (cache_dir / ".metadata-source").write_text(
+        _source_fingerprint(heic_file),
+        encoding="utf-8",
+    )
+
+    with patch(
+        "dynamic_wallpaper.metadata.decode_h24",
+        return_value={"fresh": True},
+    ) as decode:
+        assert load_h24_metadata(heic_file, cache_dir) == {"fresh": True}
+
+    decode.assert_called_once_with(heic_file)

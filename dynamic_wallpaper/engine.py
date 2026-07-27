@@ -16,7 +16,7 @@ from .cache import (
 )
 from .config import Config
 from .logging import get_logger
-from .metadata import decode_h24
+from .metadata import load_h24_metadata
 from .plasma import set_wallpaper
 from .scheduler import format_schedule, select_frame
 from .state import is_current, load_state, save_state
@@ -44,7 +44,10 @@ class WallpaperEngine:
 
             started = perf_counter()
             logger.info("Decoding HEIC metadata: %s", self.config.heic_file)
-            self._metadata = decode_h24(self.config.heic_file)
+            self._metadata = load_h24_metadata(
+                self.config.heic_file,
+                self.config.cache_dir,
+            )
             logger.info(
                 "Metadata decoded in %.1f ms",
                 (perf_counter() - started) * 1000,

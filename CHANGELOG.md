@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Decoded Apple Dynamic Desktop metadata is now cached on disk and reused while
+  the source HEIC fingerprint remains unchanged, reducing recurring timer-run
+  overhead and avoiding unnecessary `exiftool` calls.
+- Corrupt or stale metadata caches are ignored and rebuilt automatically.
+
 ### Added
 
 - `--verbose` diagnostics covering configuration, cache preparation, frame
