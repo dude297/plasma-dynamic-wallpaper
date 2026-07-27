@@ -9,6 +9,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
+- Release automation now accepts `vX.Y.Z-rcN` tags that match the package
+  version, marks them as GitHub pre-releases, and keeps them from becoming the
+  repository's latest stable release.
+- Stable `vX.Y.Z` tags continue to publish normal GitHub releases.
 - Decoded Apple Dynamic Desktop metadata is now cached on disk and reused while
   the source HEIC fingerprint remains unchanged, reducing recurring timer-run
   overhead and avoiding unnecessary `exiftool` calls.

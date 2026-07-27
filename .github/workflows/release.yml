@@ -40,16 +40,37 @@ jobs:
         run: |
           set -euo pipefail
 
-          package_version="$(python -c 'import tomllib; from pathlib import Path; project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8")); print(project["project"]["version"])')"
-          expected_tag="v${package_version}"
+          python - <<'PY'
+          import os
+          import re
+          import tomllib
+          from pathlib import Path
 
-          if [[ "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
-            echo "Release tag ${GITHUB_REF_NAME} does not match package version ${package_version}." >&2
-            echo "Update pyproject.toml or create tag ${expected_tag}." >&2
-            exit 1
-          fi
+          project = tomllib.loads(
+              Path("pyproject.toml").read_text(encoding="utf-8")
+          )
+          package_version = project["project"]["version"]
+          tag = os.environ["GITHUB_REF_NAME"]
+          match = re.fullmatch(
+              rf"v{re.escape(package_version)}(?:-rc(?P<number>[1-9][0-9]*))?",
+              tag,
+          )
 
-          echo "version=${package_version}" >> "${GITHUB_OUTPUT}"
+          if match is None:
+              raise SystemExit(
+                  f"Release tag {tag!r} does not match package version "
+                  f"{package_version!r}. Expected v{package_version} or "
+                  f"v{package_version}-rcN (N must be a positive integer)."
+              )
+
+          prerelease = match.group("number") is not None
+          release_version = tag.removeprefix("v")
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as output:
+              print(f"version={package_version}", file=output)
+              print(f"release_version={release_version}", file=output)
+              print(f"prerelease={str(prerelease).lower()}", file=output)
+          PY
 
       - name: Run Ruff lint
         run: python -m ruff check .
@@ -124,13 +145,23 @@ jobs:
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ steps.release-metadata.outputs.version }}
+          RELEASE_VERSION: ${{ steps.release-metadata.outputs.release_version }}
+          IS_PRERELEASE: ${{ steps.release-metadata.outputs.prerelease }}
         shell: bash
         run: |
           set -euo pipefail
+
+          release_flags=(
+            --verify-tag
+            --title "Plasma Dynamic Wallpaper ${RELEASE_VERSION}"
+            --notes-file RELEASE_NOTES.md
+          )
+
+          if [[ "${IS_PRERELEASE}" == "true" ]]; then
+            release_flags+=(--prerelease --latest=false)
+          fi
+
           gh release create "${GITHUB_REF_NAME}" \
             dist/*.whl \
             dist/*.tar.gz \
-            --verify-tag \
-            --title "Plasma Dynamic Wallpaper ${RELEASE_VERSION}" \
-            --notes-file RELEASE_NOTES.md
+            "${release_flags[@]}"
