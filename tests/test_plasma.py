@@ -359,3 +359,45 @@ def test_create_render_alias_prunes_old_entries(tmp_path: Path) -> None:
 
     aliases = list((tmp_path / ".plasma-render").iterdir())
     assert len(aliases) == 8
+
+
+def test_set_wallpaper_targets_requested_screens(tmp_path: Path) -> None:
+    image = tmp_path / "wallpaper.png"
+    image.touch()
+    uri = image.resolve().as_uri()
+    response = subprocess.CompletedProcess(
+        args=["qdbus6"],
+        returncode=0,
+        stdout=json.dumps({"id": 114, "screen": 1, "image": uri}) + "\n",
+        stderr="",
+    )
+
+    with (
+        patch("dynamic_wallpaper.plasma.shutil.which", return_value="qdbus6"),
+        patch(
+            "dynamic_wallpaper.plasma._create_render_alias",
+            return_value=image,
+        ),
+        patch(
+            "dynamic_wallpaper.plasma.subprocess.run",
+            return_value=response,
+        ) as run,
+    ):
+        set_wallpaper(image, (1,))
+
+    script = run.call_args.args[0][4]
+    assert "const requestedScreens = [1];" in script
+    assert "requestedScreens.includes(desktop.screen)" in script
+    assert "targetDesktops" in script
+
+
+def test_verify_wallpaper_response_rejects_missing_requested_screen(
+    tmp_path: Path,
+) -> None:
+    from dynamic_wallpaper.plasma import _verify_wallpaper_response
+
+    uri = (tmp_path / "wallpaper.png").resolve().as_uri()
+    output = json.dumps({"id": 113, "screen": 0, "image": uri})
+
+    with pytest.raises(PlasmaError, match="requested screen.*1"):
+        _verify_wallpaper_response(output, uri, (0, 1))

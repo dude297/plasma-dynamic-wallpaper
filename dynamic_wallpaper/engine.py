@@ -223,7 +223,7 @@ class WallpaperEngine:
                 " (forced)" if force else "",
                 wallpaper,
             )
-            set_wallpaper(wallpaper)
+            set_wallpaper(wallpaper, self.config.screen_ids)
             logger.info(
                 "Plasma wallpaper update completed in %.1f ms",
                 (perf_counter() - apply_started) * 1000,

@@ -159,6 +159,12 @@ def main() -> int:
             print(f"Configuration file: {config_path()}")
             print(f"Source HEIC: {config.heic_file}")
             print(f"Cache directory: {config.cache_dir}")
+            screens = (
+                "all"
+                if config.screen_ids is None
+                else ", ".join(str(value) for value in config.screen_ids)
+            )
+            print(f"Target screens: {screens}")
             return 0
 
         engine = WallpaperEngine(config)

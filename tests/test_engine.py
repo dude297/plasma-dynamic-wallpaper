@@ -240,7 +240,7 @@ def test_apply_sets_wallpaper_and_saves_state(tmp_path: Path) -> None:
         output = engine.apply(datetime(2026, 7, 23, 8, 15))
 
     assert output[0] == f"Applied frame 0/0: {frame}"
-    set_wallpaper.assert_called_once_with(frame)
+    set_wallpaper.assert_called_once_with(frame, None)
     save_state.assert_called_once_with(engine.state_file, frame, 0)
 
 
@@ -261,7 +261,7 @@ def test_force_applies_even_when_frame_is_current(tmp_path: Path) -> None:
         )
 
     assert output[0] == f"Applied frame 0/0: {frame}"
-    set_wallpaper.assert_called_once_with(frame)
+    set_wallpaper.assert_called_once_with(frame, None)
     save_state.assert_called_once_with(engine.state_file, frame, 0)
 
 

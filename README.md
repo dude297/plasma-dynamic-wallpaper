@@ -15,6 +15,7 @@ Plasma Dynamic Wallpaper is one of the few Linux implementations that uses Apple
 - Native `apple_desktop:h24` schedule decoding
 - Automatic frame extraction and caching
 - KDE Plasma integration
+- Multi-monitor targeting by Plasma screen ID
 - User-level systemd timer
 - Skips redundant wallpaper updates
 - CLI for inspection and testing
@@ -66,6 +67,9 @@ Example:
 ```bash
 HEIC_FILE="$HOME/Pictures/DynamicWallpapers/Fuji/Fuji.heic"
 CACHE_DIR="$HOME/.cache/dynamic-wallpaper/Fuji"
+
+# Optional: update only selected Plasma screens
+# SCREEN_IDS=0,1
 ```
 
 ## Usage

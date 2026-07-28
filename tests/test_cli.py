@@ -108,6 +108,7 @@ def test_main_prints_active_configuration(
         "Configuration file: /config/dynamic-wallpaper/config\n"
         "Source HEIC: /wallpapers/Fuji.heic\n"
         "Cache directory: /cache/Fuji\n"
+        "Target screens: all\n"
     )
     engine_type.assert_not_called()
 

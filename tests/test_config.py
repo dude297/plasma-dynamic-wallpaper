@@ -161,3 +161,39 @@ def test_config_path_defaults_to_user_config_directory(
     monkeypatch.setattr(Path, "home", Mock(return_value=tmp_path))
 
     assert config_path() == tmp_path / ".config/dynamic-wallpaper/config"
+
+
+def test_load_config_reads_optional_screen_ids(tmp_path: Path) -> None:
+    config_file = tmp_path / "config"
+    config_file.write_text(
+        "HEIC_FILE=/wallpaper.heic\nCACHE_DIR=/cache\nSCREEN_IDS=0, 2\n",
+        encoding="utf-8",
+    )
+
+    assert load_config(config_file).screen_ids == (0, 2)
+
+
+@pytest.mark.parametrize("value", ["left", "0,left"])
+def test_load_config_rejects_invalid_screen_ids(
+    tmp_path: Path, value: str
+) -> None:
+    config_file = tmp_path / "config"
+    config_file.write_text(
+        f"HEIC_FILE=/wallpaper.heic\nCACHE_DIR=/cache\nSCREEN_IDS={value}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="SCREEN_IDS must be"):
+        load_config(config_file)
+
+
+@pytest.mark.parametrize("screen_ids", [(-1,), (0, 0)])
+def test_validate_config_rejects_invalid_screen_selection(
+    tmp_path: Path, screen_ids: tuple[int, ...]
+) -> None:
+    config = Config(
+        tmp_path / "wallpaper.heic", tmp_path / "cache", screen_ids
+    )
+
+    with pytest.raises(ValueError, match="SCREEN_IDS"):
+        validate_config(config)

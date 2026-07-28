@@ -11,6 +11,7 @@ from pathlib import Path
 class Config:
     heic_file: Path
     cache_dir: Path
+    screen_ids: tuple[int, ...] | None = None
 
 
 def _parse_assignment(line: str) -> tuple[str, str] | None:
@@ -63,9 +64,25 @@ def load_config(path: Path | None = None) -> Config:
     except KeyError as exc:
         raise ValueError(f"Missing required setting: {exc.args[0]}") from exc
 
+    screen_ids: tuple[int, ...] | None = None
+    raw_screen_ids = values.get("SCREEN_IDS", "").strip()
+    if raw_screen_ids:
+        try:
+            parsed_screen_ids = tuple(
+                int(value.strip())
+                for value in raw_screen_ids.split(",")
+                if value.strip()
+            )
+        except ValueError as exc:
+            raise ValueError(
+                "SCREEN_IDS must be a comma-separated list of integers"
+            ) from exc
+        screen_ids = parsed_screen_ids
+
     return Config(
         heic_file=heic_file,
         cache_dir=cache_dir,
+        screen_ids=screen_ids,
     )
 
 
@@ -75,6 +92,14 @@ def validate_config(config: Config) -> None:
         raise ValueError(
             f"HEIC_FILE must point to a .heic file: {config.heic_file}"
         )
+
+    if config.screen_ids is not None:
+        if not config.screen_ids:
+            raise ValueError("SCREEN_IDS must contain at least one screen")
+        if any(screen_id < 0 for screen_id in config.screen_ids):
+            raise ValueError("SCREEN_IDS cannot contain negative values")
+        if len(set(config.screen_ids)) != len(config.screen_ids):
+            raise ValueError("SCREEN_IDS cannot contain duplicates")
 
     if config.cache_dir.exists() and not config.cache_dir.is_dir():
         raise ValueError(

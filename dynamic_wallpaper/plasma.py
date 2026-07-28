@@ -19,7 +19,9 @@ class PlasmaError(RuntimeError):
     """Raised when Plasma cannot update the wallpaper."""
 
 
-def set_wallpaper(image_path: Path) -> None:
+def set_wallpaper(
+    image_path: Path, screen_ids: tuple[int, ...] | None = None
+) -> None:
     """Apply *image_path* to every Plasma desktop and verify the write.
 
     Plasma can retain the requested configuration while its renderer continues
@@ -37,6 +39,9 @@ def set_wallpaper(image_path: Path) -> None:
     render_path = _create_render_alias(image_path)
     wallpaper_uri = render_path.resolve().as_uri()
     encoded_uri = json.dumps(wallpaper_uri)
+    encoded_screens = json.dumps(
+        list(screen_ids) if screen_ids is not None else None
+    )
 
     # Plasma can persist the new Image value without repainting the desktop.
     # reloadConfig() asks each containment to refresh immediately, while the
@@ -44,6 +49,10 @@ def set_wallpaper(image_path: Path) -> None:
     # write from a renderer problem inside plasmashell.
     script = f"""
 const allDesktops = desktops();
+const requestedScreens = {encoded_screens};
+const targetDesktops = requestedScreens === null
+    ? allDesktops
+    : allDesktops.filter(desktop => requestedScreens.includes(desktop.screen));
 
 if (allDesktops.length === 0) {{
     throw new Error("Plasma reported no desktop containments");
@@ -96,7 +105,9 @@ for (let index = 0; index < allDesktops.length; index++) {{
 
     elapsed_ms = (perf_counter() - started) * 1000
     logger.debug("Raw Plasma verification response: %r", completed.stdout)
-    records = _verify_wallpaper_response(completed.stdout, wallpaper_uri)
+    records = _verify_wallpaper_response(
+        completed.stdout, wallpaper_uri, screen_ids
+    )
     logger.info(
         "Plasma verified %d desktop(s) in %.1f ms",
         len(records),
@@ -142,7 +153,9 @@ def _prune_render_aliases(render_dir: Path, *, keep: int) -> None:
 
 
 def _verify_wallpaper_response(
-    output: str, expected_uri: str
+    output: str,
+    expected_uri: str,
+    expected_screens: tuple[int, ...] | None = None,
 ) -> list[dict[str, object]]:
     """Verify that every desktop reports the requested wallpaper URI."""
     records: list[dict[str, object]] = []
@@ -168,6 +181,17 @@ def _verify_wallpaper_response(
 
     if not records:
         raise PlasmaError("Plasma did not report any updated desktops")
+
+    if expected_screens is not None:
+        reported_screens = {record.get("screen") for record in records}
+        missing_screens = set(expected_screens) - reported_screens
+        if missing_screens:
+            missing = ", ".join(
+                str(value) for value in sorted(missing_screens)
+            )
+            raise PlasmaError(
+                "Plasma did not report requested screen(s): " + missing
+            )
 
     mismatches = [
         record for record in records if record.get("image") != expected_uri
