@@ -22,9 +22,7 @@ _RUN_LIVE = os.environ.get("PDW_RUN_LIVE_PLASMA_TESTS") == "1"
 def require_live_plasma() -> None:
     """Skip unless the caller explicitly enables destructive desktop tests."""
     if not _RUN_LIVE:
-        pytest.skip(
-            "set PDW_RUN_LIVE_PLASMA_TESTS=1 inside a Plasma session"
-        )
+        pytest.skip("set PDW_RUN_LIVE_PLASMA_TESTS=1 inside a Plasma session")
 
     if shutil.which("qdbus6") is None:
         pytest.skip("qdbus6 is not installed")
