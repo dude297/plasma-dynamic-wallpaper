@@ -20,6 +20,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Opt-in live KDE Plasma integration test that applies a temporary wallpaper,
+  verifies every desktop read-back, and restores the previous configuration.
+- Manual GitHub Actions workflow for a self-hosted Plasma desktop runner.
+- Dedicated installation, troubleshooting, architecture, testing, and release
+  process documentation.
+- README CI and release badges plus a central documentation index.
+
 - `--verbose` diagnostics covering configuration, cache preparation, frame
   selection, Plasma DBus verification, and operation timing.
 - `--log-file PATH` for persistent INFO/DEBUG troubleshooting logs with

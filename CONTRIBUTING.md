@@ -27,6 +27,9 @@ python -m twine check dist/*
 git diff --check
 ```
 
+The opt-in live Plasma test and self-hosted runner requirements are documented
+in [docs/testing.md](docs/testing.md).
+
 Use `python -m ruff format .` to apply formatting and
 `python -m ruff check . --fix` for safe automatic lint fixes.
 
@@ -46,7 +49,7 @@ Before tagging a release:
    `CHANGELOG.md` section.
 3. Run every command under **Quality checks**.
 4. Commit and push the release preparation changes.
-5. Create and push the exact matching tag, such as `v0.1.0`.
+5. Create and push the exact matching tag, such as `v0.1.0`, or a release-candidate tag such as `v0.1.0-rc6`.
 
 ```bash
 git tag -a v0.1.0 -m "Release v0.1.0"

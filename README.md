@@ -1,5 +1,8 @@
 # Plasma Dynamic Wallpaper
 
+[![CI](https://github.com/dude297/plasma-dynamic-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/dude297/plasma-dynamic-wallpaper/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/dude297/plasma-dynamic-wallpaper?include_prereleases)](https://github.com/dude297/plasma-dynamic-wallpaper/releases)
+
 > Use Apple's Dynamic Desktop HEIC wallpapers on KDE Plasma.
 
 ![Demo](docs/demo.gif)
@@ -34,6 +37,9 @@ Requires:
 - systemd
 
 ## Installation
+
+See the [complete installation guide](docs/installation.md) for requirements,
+verification, updating, and removal.
 
 ```bash
 git clone https://github.com/dude297/plasma-dynamic-wallpaper.git
@@ -194,6 +200,14 @@ Released under the MIT License.
 dynamic-wallpaper --version
 ```
 
+## Documentation
+
+- [Installation](docs/installation.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Architecture](docs/architecture.md)
+- [Testing, including live Plasma](docs/testing.md)
+- [Release process](docs/release-process.md)
+
 ## Architecture
 
 The CLI loads and validates configuration, then delegates orchestration to
@@ -231,9 +245,12 @@ python -m pytest --cov=dynamic_wallpaper --cov-report=term-missing
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for package-build and pull-request
-checks.
+checks. Live desktop verification is documented in [docs/testing.md](docs/testing.md).
 
 ## Troubleshooting
+
+See the [troubleshooting guide](docs/troubleshooting.md) for logging, cache,
+systemd, D-Bus, and bug-report diagnostics.
 
 ### Configuration file not found
 

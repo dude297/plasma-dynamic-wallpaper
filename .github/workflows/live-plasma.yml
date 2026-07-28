@@ -1,0 +1,52 @@
+name: Live Plasma Integration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-plasma-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plasma:
+    name: Plasma desktop smoke test
+    runs-on: [self-hosted, linux, kde-plasma]
+    timeout-minutes: 15
+
+    env:
+      PDW_RUN_LIVE_PLASMA_TESTS: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Verify desktop session
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${DBUS_SESSION_BUS_ADDRESS:-}"
+          qdbus6 org.kde.plasmashell /PlasmaShell \
+            org.kde.PlasmaShell.evaluateScript \
+            'print(desktops().length)'
+
+      - name: Create isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv-integration
+          .venv-integration/bin/python -m pip install --upgrade pip
+          .venv-integration/bin/python -m pip install -e ".[dev]"
+
+      - name: Run live Plasma test
+        run: >-
+          .venv-integration/bin/python -m pytest
+          tests/integration/test_live_plasma.py
+          -m integration
+          -vv
+
+      - name: Remove isolated environment
+        if: always()
+        run: rm -rf .venv-integration

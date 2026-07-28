@@ -1,0 +1,115 @@
+# Troubleshooting
+
+## Start with diagnostics
+
+Run:
+
+```bash
+dynamic-wallpaper --doctor
+dynamic-wallpaper --config
+dynamic-wallpaper --cache-status
+dynamic-wallpaper --status
+```
+
+For a complete operation trace:
+
+```bash
+dynamic-wallpaper --force --verbose
+```
+
+To retain logs:
+
+```bash
+dynamic-wallpaper --force --verbose \
+  --log-file "$HOME/.cache/dynamic-wallpaper/debug.log"
+```
+
+## The command works but the desktop does not change
+
+Confirm Plasma retained the requested image:
+
+```bash
+qdbus6 org.kde.plasmashell /PlasmaShell \
+  org.kde.PlasmaShell.evaluateScript '
+for (const d of desktops()) {
+    d.currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+    print(d.readConfig("Image", "<missing>"));
+}'
+```
+
+A recent application should point to a unique file under `.plasma-render`.
+The alias exists to avoid stale renderer-cache behavior. If read-back is
+correct but the visible desktop remains stale, record the verbose log and the
+Plasma version before restarting `plasmashell`; the mismatch is then in the
+live Plasma renderer rather than the configuration write.
+
+## First run is slow
+
+The first run extracts HEIC frames and decodes metadata. Later runs reuse both
+caches while the source file fingerprint is unchanged. A typical cached run
+should complete in milliseconds rather than seconds.
+
+Use this command to inspect the cache:
+
+```bash
+dynamic-wallpaper --cache-status
+```
+
+Rebuild it only when necessary:
+
+```bash
+dynamic-wallpaper --rebuild-cache
+```
+
+## Timer does not run
+
+```bash
+systemctl --user status dynamic-wallpaper.timer
+systemctl --user status dynamic-wallpaper.service
+journalctl --user -u dynamic-wallpaper.service -n 100
+```
+
+The service must run as the logged-in Plasma user so that it inherits access to
+the desktop D-Bus session.
+
+## Missing dependency
+
+```bash
+command -v exiftool
+command -v heif-convert
+command -v qdbus6
+```
+
+On Ubuntu or Kubuntu:
+
+```bash
+sudo apt install libimage-exiftool-perl libheif-examples qdbus-qt6
+```
+
+## Configuration errors
+
+Inspect resolved paths:
+
+```bash
+dynamic-wallpaper --config
+```
+
+Verify the HEIC file exists and that the cache parent directory is writable.
+Use `config/config.example` as the reference format.
+
+## Collecting a useful bug report
+
+Include:
+
+```bash
+dynamic-wallpaper --version
+plasmashell --version
+python --version
+dynamic-wallpaper --doctor
+dynamic-wallpaper --force --verbose
+systemctl --user status dynamic-wallpaper.timer
+journalctl --user -u dynamic-wallpaper.service -n 100
+```
+
+Do not include private filesystem paths or wallpaper files unless they are
+necessary to reproduce the issue.

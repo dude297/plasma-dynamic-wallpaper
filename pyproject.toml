@@ -48,6 +48,9 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: requires an explicitly enabled live KDE Plasma session",
+]
 
 [tool.ruff.lint.per-file-ignores]
 "dynamic_wallpaper/cli.py" = ["DTZ005", "DTZ007"]
