@@ -37,6 +37,20 @@ Requires:
 - qdbus6
 - systemd
 
+## Easy installation
+
+After the package is published, install it in an isolated environment with
+`pipx`:
+
+```bash
+pipx install plasma-dynamic-wallpaper
+dynamic-wallpaper --setup
+```
+
+Use `dynamic-wallpaper --setup-no-enable` when systemd files should be
+installed without immediately enabling the timer. The source checkout
+installer remains supported for development and offline installation.
+
 ## Installation
 
 See the [complete installation guide](docs/installation.md) for requirements,
@@ -86,6 +100,13 @@ dynamic-wallpaper --extract       # Extract frames only
 dynamic-wallpaper --dry-run       # Preview selected frame
 dynamic-wallpaper --at 18:00 --dry-run
 dynamic-wallpaper --force
+
+# Wallpaper library
+dynamic-wallpaper --library-list
+dynamic-wallpaper --library-search mountain
+dynamic-wallpaper --library-install WALLPAPER_ID
+dynamic-wallpaper --library-installed
+dynamic-wallpaper --library-remove WALLPAPER_ID
 ```
 
 ### Inspect active configuration
@@ -188,7 +209,7 @@ Existing configuration is backed up before every reinstall.
 
 ## Roadmap
 
-- Multiple wallpaper collections
+- Curated wallpaper catalog growth
 - Additional desktop environments
 - PyPI publishing
 - Signed release artifacts
@@ -211,6 +232,7 @@ dynamic-wallpaper --version
 - [Architecture](docs/architecture.md)
 - [Testing, including live Plasma](docs/testing.md)
 - [Release process](docs/release-process.md)
+- [Wallpaper library](docs/wallpaper-library.md)
 
 ## Architecture
 

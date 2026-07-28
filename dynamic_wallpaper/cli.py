@@ -12,6 +12,16 @@ from .cache import CacheError
 from .config import config_path, load_config, validate_config
 from .diagnostics import run_diagnostics
 from .engine import WallpaperEngine
+from .installer import InstallError, install_user
+from .library import (
+    LibraryError,
+    find_entry,
+    install_wallpaper,
+    installed_wallpapers,
+    load_catalog,
+    remove_wallpaper,
+    search_catalog,
+)
 from .logging import configure_logging, get_logger
 from .metadata import MetadataError
 from .plasma import PlasmaError
@@ -100,6 +110,41 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="extract and cache frames without changing wallpaper",
     )
+    actions.add_argument(
+        "--setup",
+        action="store_true",
+        help="install user configuration and enable the systemd timer",
+    )
+    actions.add_argument(
+        "--setup-no-enable",
+        action="store_true",
+        help="install user configuration without enabling the timer",
+    )
+    actions.add_argument(
+        "--library-list",
+        action="store_true",
+        help="list wallpapers available in the remote catalog",
+    )
+    actions.add_argument(
+        "--library-installed",
+        action="store_true",
+        help="list wallpapers installed from the library",
+    )
+    actions.add_argument(
+        "--library-search",
+        metavar="TERM",
+        help="search the remote wallpaper catalog",
+    )
+    actions.add_argument(
+        "--library-install",
+        metavar="ID",
+        help="download and verify a wallpaper from the catalog",
+    )
+    actions.add_argument(
+        "--library-remove",
+        metavar="ID",
+        help="remove a wallpaper installed from the library",
+    )
     parser.add_argument(
         "--at",
         metavar="HH:MM",
@@ -152,6 +197,46 @@ def main() -> int:
         return 0 if healthy else 1
 
     try:
+        if args.setup or args.setup_no_enable:
+            for line in install_user(enable_timer=args.setup):
+                print(line)
+            return 0
+
+        if args.library_list or args.library_search is not None:
+            entries = load_catalog()
+            if args.library_search is not None:
+                entries = search_catalog(entries, args.library_search)
+            if not entries:
+                print("No wallpapers found.")
+                return 0
+            for entry in entries:
+                print(f"{entry.wallpaper_id}: {entry.name} — {entry.author}")
+                if entry.description:
+                    print(f"  {entry.description}")
+            return 0
+
+        if args.library_installed:
+            installed = installed_wallpapers()
+            if not installed:
+                print("No library wallpapers installed.")
+                return 0
+            for path in installed:
+                print(path)
+            return 0
+
+        if args.library_install is not None:
+            entry = find_entry(load_catalog(), args.library_install)
+            destination = install_wallpaper(entry)
+            print(f"Installed {entry.name}: {destination}")
+            print("To use it, set HEIC_FILE in your configuration to:")
+            print(destination)
+            return 0
+
+        if args.library_remove is not None:
+            removed = remove_wallpaper(args.library_remove)
+            print(f"Removed wallpaper: {removed}")
+            return 0
+
         config = load_config()
         validate_config(config)
 
@@ -222,6 +307,8 @@ def main() -> int:
     except (
         CacheError,
         FileNotFoundError,
+        InstallError,
+        LibraryError,
         MetadataError,
         PlasmaError,
         ScheduleError,

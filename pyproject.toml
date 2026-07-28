@@ -39,8 +39,11 @@ dev = [
 [project.scripts]
 dynamic-wallpaper = "dynamic_wallpaper.cli:main"
 
-[tool.setuptools]
-packages = ["dynamic_wallpaper"]
+[tool.setuptools.packages.find]
+include = ["dynamic_wallpaper*"]
+
+[tool.setuptools.package-data]
+"dynamic_wallpaper.data" = ["config.example", "*.service", "*.timer"]
 
 [tool.ruff]
 line-length = 79

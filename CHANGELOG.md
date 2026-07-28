@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- `pipx`-friendly `--setup` and `--setup-no-enable` commands that install
+  packaged user configuration and systemd unit templates.
+- Checksum-verified wallpaper library commands for catalog listing, search,
+  installation, installed-file discovery, and removal.
+- Configurable catalog source through `PDW_CATALOG_URL`, including local
+  `file://` catalogs for development and mirrors.
+- Wallpaper catalog schema and distribution guidance.
+
+### Changed
+
+- Package discovery now includes application data templates required by wheel
+  and pipx installations.
+
 ## [0.1.0] - 2026-07-27
 
 ### Added
