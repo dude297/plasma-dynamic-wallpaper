@@ -7,57 +7,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
-### Changed
-
-- Release automation now accepts `vX.Y.Z-rcN` tags that match the package
-  version, marks them as GitHub pre-releases, and keeps them from becoming the
-  repository's latest stable release.
-- Stable `vX.Y.Z` tags continue to publish normal GitHub releases.
-- Decoded Apple Dynamic Desktop metadata is now cached on disk and reused while
-  the source HEIC fingerprint remains unchanged, reducing recurring timer-run
-  overhead and avoiding unnecessary `exiftool` calls.
-- Corrupt or stale metadata caches are ignored and rebuilt automatically.
-
-### Added
-
-- Opt-in live KDE Plasma integration test that applies a temporary wallpaper,
-  verifies every desktop read-back, and restores the previous configuration.
-- Manual GitHub Actions workflow for a self-hosted Plasma desktop runner.
-- Dedicated installation, troubleshooting, architecture, testing, and release
-  process documentation.
-- README CI and release badges plus a central documentation index.
-
-- `--verbose` diagnostics covering configuration, cache preparation, frame
-  selection, Plasma DBus verification, and operation timing.
-- `--log-file PATH` for persistent INFO/DEBUG troubleshooting logs with
-  automatic parent-directory creation.
-
-### Changed
-
-- Plasma wallpaper updates now emit read-back counts and elapsed timing through
-  the application logger.
-
-### Added
-
-- Safer installer with dependency aggregation, confirmation prompts, `--yes`,
-  `--no-enable`, user-systemd validation, and timestamped config backups.
-- Safer uninstaller with confirmation prompts, `--yes`, and optional `--purge`
-  removal of configuration and cached frames.
-- Script interface tests for help and invalid options.
-
-### Added
-
-- `dynamic-wallpaper --cache-status` reporting for cache freshness and extracted frame count.
-- `dynamic-wallpaper --rebuild-cache` for forced frame re-extraction without manual cache deletion.
-- `dynamic-wallpaper --config` output for the active configuration file, HEIC source, and cache directory.
-- `dynamic-wallpaper --doctor` readiness checks for dependencies, configuration, wallpaper access, and cache-directory availability.
-- `dynamic-wallpaper --status` reporting for the last successfully applied frame, timestamp, and cached wallpaper availability.
-
-### Changed
-
-- Primary CLI information actions are now mutually exclusive to prevent ambiguous command combinations.
-
-## [0.1.0] - 2026-07-24
+## [0.1.0] - 2026-07-27
 
 ### Added
 
@@ -65,7 +15,48 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Apple `apple_desktop:h24` metadata decoding.
 - Frame extraction, caching, scheduling, state tracking, and systemd integration.
 - CLI `--version` option and actionable configuration validation.
+- `dynamic-wallpaper --doctor` readiness checks for dependencies,
+  configuration, wallpaper access, and cache-directory availability.
+- `dynamic-wallpaper --status` reporting for the last successfully applied
+  frame, timestamp, and cached wallpaper availability.
+- `dynamic-wallpaper --config` output for the active configuration file, HEIC
+  source, and cache directory.
+- `dynamic-wallpaper --cache-status` reporting for cache freshness and
+  extracted frame count.
+- `dynamic-wallpaper --rebuild-cache` for forced frame re-extraction without
+  manual cache deletion.
+- `--verbose` diagnostics covering configuration, cache preparation, frame
+  selection, Plasma DBus verification, and operation timing.
+- `--log-file PATH` for persistent INFO/DEBUG troubleshooting logs with
+  automatic parent-directory creation.
+- Safer installer with dependency aggregation, confirmation prompts, `--yes`,
+  `--no-enable`, user-systemd validation, and timestamped config backups.
+- Safer uninstaller with confirmation prompts, `--yes`, and optional `--purge`
+  removal of configuration and cached frames.
+- Opt-in live KDE Plasma integration test that applies a temporary wallpaper,
+  verifies every desktop read-back, and restores the previous configuration.
+- Manual GitHub Actions workflow for a self-hosted Plasma desktop runner.
+- Dedicated installation, troubleshooting, architecture, testing, and release
+  process documentation.
+- README CI and release badges plus a central documentation index.
 - Automated tests, coverage reporting, and Python 3.12 through 3.14 CI.
 - Contributor guidance and GitHub issue and pull request templates.
 - Validated wheel and source-distribution builds.
 - Tag-driven GitHub Release workflow with version and changelog checks.
+- Release-candidate tag support for `vX.Y.Z-rcN` GitHub pre-releases.
+
+### Changed
+
+- Primary CLI information actions are mutually exclusive to prevent ambiguous
+  command combinations.
+- Plasma wallpaper updates verify configuration read-back and emit desktop
+  counts and elapsed timing through the application logger.
+- Plasma wallpaper application uses unique `.plasma-render` aliases to avoid
+  stale renderer-cache reuse.
+- Decoded Apple Dynamic Desktop metadata is cached on disk and reused while the
+  source HEIC fingerprint remains unchanged, reducing recurring timer-run
+  overhead and avoiding unnecessary `exiftool` calls.
+- Corrupt or stale metadata caches are ignored and rebuilt automatically.
+- Stable `vX.Y.Z` tags publish normal GitHub releases, while matching
+  `vX.Y.Z-rcN` tags are marked as pre-releases and do not replace the latest
+  stable release.

@@ -24,13 +24,29 @@ v0.1.0
 
 ## Checklist
 
-1. Run the standard quality checks in `CONTRIBUTING.md`.
-2. Run the live Plasma integration workflow when a self-hosted desktop runner
+1. Confirm the working tree is clean and the release commit is on the intended
+   branch.
+2. Run the standard quality checks in `CONTRIBUTING.md`.
+3. Run the live Plasma integration workflow when a self-hosted desktop runner
    is available.
-3. Update `CHANGELOG.md` and ensure the target version section is non-empty.
-4. Update `pyproject.toml` when releasing a new package version.
-5. Commit and push the release preparation.
-6. Create an annotated matching tag and push it.
+4. Move completed entries from `[Unreleased]` into the target version section
+   in `CHANGELOG.md`, add the release date, and ensure the section is non-empty.
+5. Update `pyproject.toml` when releasing a new package version and confirm its
+   development-status classifier is appropriate.
+6. Build and validate the distributions locally:
+
+   ```bash
+   rm -rf build dist *.egg-info
+   python -m build
+   python -m twine check dist/*
+   ```
+
+7. Commit and push the release preparation.
+8. Create an annotated matching tag and push it.
+9. Confirm the GitHub release workflow succeeds and that the wheel, source
+   archive, and release notes are attached.
+10. Install the released wheel in a clean environment and run
+    `dynamic-wallpaper --version` as a final smoke test.
 
 Example release candidate:
 
