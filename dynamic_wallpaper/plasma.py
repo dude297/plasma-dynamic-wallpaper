@@ -47,17 +47,24 @@ def set_wallpaper(
 
     script = f"""
 const allDesktops = desktops();
+const activeDesktops = allDesktops.filter(desktop => desktop.screen >= 0);
 const requestedScreens = {encoded_screens};
 const targetDesktops = requestedScreens === null
-    ? allDesktops
-    : allDesktops.filter(desktop => requestedScreens.includes(desktop.screen));
+    ? activeDesktops
+    : activeDesktops.filter(
+        desktop => requestedScreens.includes(desktop.screen)
+    );
 
 if (allDesktops.length === 0) {{
     throw new Error("Plasma reported no desktop containments");
 }}
 
+if (activeDesktops.length === 0) {{
+    throw new Error("Plasma reported no active desktop containments");
+}}
+
 if (targetDesktops.length === 0) {{
-    throw new Error("Plasma found no desktops matching the requested screens");
+    throw new Error("Plasma found no active desktops matching the requested screens");
 }}
 
 const updated = [];
@@ -124,11 +131,17 @@ print(JSON.stringify({{updated, active}}));
 
     elapsed_ms = (perf_counter() - started) * 1000
     logger.debug("Raw Plasma verification response: %r", completed.stdout)
-    updated, active_uris = _verify_wallpaper_response(
+    updated, active_uris, missing_screens = _verify_wallpaper_response(
         completed.stdout,
         wallpaper_uri,
         screen_ids,
     )
+    if missing_screens:
+        logger.warning(
+            "Requested screen(s) temporarily unavailable: %s; "
+            "the next timer run will retry them",
+            ", ".join(str(value) for value in sorted(missing_screens)),
+        )
     _prune_render_aliases(
         render_path.parent,
         protected_uris=active_uris,
@@ -154,9 +167,12 @@ def wallpaper_is_configured(
     )
     script = f"""
 const requestedScreens = {encoded_screens};
+const activeDesktops = desktops().filter(desktop => desktop.screen >= 0);
 const selected = requestedScreens === null
-    ? desktops()
-    : desktops().filter(desktop => requestedScreens.includes(desktop.screen));
+    ? activeDesktops
+    : activeDesktops.filter(
+        desktop => requestedScreens.includes(desktop.screen)
+    );
 const result = [];
 for (let index = 0; index < selected.length; index++) {{
     const desktop = selected[index];
@@ -299,8 +315,8 @@ def _verify_wallpaper_response(
     output: str,
     expected_uri: str,
     expected_screens: tuple[int, ...] | None = None,
-) -> tuple[list[dict[str, object]], set[str]]:
-    """Verify updated desktops and return every active wallpaper URI."""
+) -> tuple[list[dict[str, object]], set[str], set[int]]:
+    """Verify active updates and report temporarily unavailable screens."""
     try:
         payload = json.loads(output.strip())
     except json.JSONDecodeError as exc:
@@ -314,16 +330,14 @@ def _verify_wallpaper_response(
     updated = _verification_records(payload.get("updated"), "updated")
     active = _verification_records(payload.get("active"), "active")
 
+    missing_screens: set[int] = set()
     if expected_screens is not None:
-        reported_screens = {record.get("screen") for record in updated}
+        reported_screens = {
+            screen
+            for record in updated
+            if isinstance((screen := record.get("screen")), int)
+        }
         missing_screens = set(expected_screens) - reported_screens
-        if missing_screens:
-            missing = ", ".join(
-                str(value) for value in sorted(missing_screens)
-            )
-            raise PlasmaError(
-                "Plasma did not report requested screen(s): " + missing
-            )
 
     mismatches = [
         record for record in updated if record.get("image") != expected_uri
@@ -342,4 +356,4 @@ def _verify_wallpaper_response(
         for record in active
         if isinstance((image := record.get("image")), str) and image
     }
-    return updated, active_uris
+    return updated, active_uris, missing_screens

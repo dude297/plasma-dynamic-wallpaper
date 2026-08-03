@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+- Add active-screen autodetection and ignore inactive Plasma containments.
+- Treat temporarily unavailable configured screens as retryable warnings.
+
 ### Added
 
 - `pipx`-friendly `--setup` and `--setup-no-enable` commands that install

@@ -83,6 +83,9 @@ HEIC_FILE="$HOME/Pictures/DynamicWallpapers/Fuji/Fuji.heic"
 CACHE_DIR="$HOME/.cache/dynamic-wallpaper/Fuji"
 
 # Optional: update only selected Plasma screens
+# By default, all currently active screens are detected automatically.
+# Set SCREEN_IDS only to restrict updates to specific active Plasma screens.
+# Temporarily disconnected screens are skipped and retried automatically.
 # SCREEN_IDS=0,1
 ```
 

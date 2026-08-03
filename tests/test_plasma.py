@@ -87,7 +87,10 @@ def test_set_wallpaper_invokes_plasma_shell(tmp_path: Path) -> None:
         "timeout": 15,
     }
     script = args[4]
+    assert "const activeDesktops" in script
+    assert "desktop.screen >= 0" in script
     assert "const targetDesktops" in script
+    assert "activeDesktops.length === 0" in script
     assert "targetDesktops.length === 0" in script
     assert "index < targetDesktops.length" in script
     assert "const updated = [];" in script
@@ -183,7 +186,7 @@ def test_set_wallpaper_rejects_mismatched_readback(tmp_path: Path) -> None:
         set_wallpaper(image)
 
 
-def test_set_wallpaper_rejects_missing_requested_screen(
+def test_set_wallpaper_warns_about_missing_requested_screen(
     tmp_path: Path,
 ) -> None:
     image = tmp_path / "wallpaper.png"
@@ -197,9 +200,13 @@ def test_set_wallpaper_rejects_missing_requested_screen(
             "dynamic_wallpaper.plasma.subprocess.run",
             return_value=_response(image, updated_screens=(0,)),
         ),
-        pytest.raises(PlasmaError, match="requested screen.*1"),
+        patch("dynamic_wallpaper.plasma.logger.warning") as warning,
     ):
         set_wallpaper(image, (0, 1))
+
+    warning.assert_called_once()
+    assert "temporarily unavailable" in warning.call_args.args[0]
+    assert warning.call_args.args[1] == "1"
 
 
 @pytest.mark.parametrize(
@@ -289,9 +296,10 @@ def test_verify_wallpaper_response_returns_updated_and_active(
             ],
         }
     )
-    updated, active = _verify_wallpaper_response(output, uri, (0,))
+    updated, active, missing = _verify_wallpaper_response(output, uri, (0,))
     assert [record["id"] for record in updated] == [1]
     assert active == {uri, old_uri}
+    assert missing == set()
 
 
 def test_wallpaper_is_configured_accepts_existing_render_alias(
@@ -357,3 +365,52 @@ def test_set_wallpaper_reports_timeout(tmp_path: Path) -> None:
         pytest.raises(PlasmaError, match="timed out"),
     ):
         set_wallpaper(image)
+
+
+def test_verify_wallpaper_response_reports_temporarily_missing_screen(
+    tmp_path: Path,
+) -> None:
+    from dynamic_wallpaper.plasma import _verify_wallpaper_response
+
+    uri = (tmp_path / "wallpaper.png").resolve().as_uri()
+    output = json.dumps(
+        {
+            "updated": [{"id": 1, "screen": 0, "image": uri}],
+            "active": [
+                {"id": 1, "screen": 0, "image": uri},
+                {"id": 2, "screen": -1, "image": "file:///tmp/old.png"},
+            ],
+        }
+    )
+
+    updated, active, missing = _verify_wallpaper_response(output, uri, (0, 1))
+
+    assert [record["screen"] for record in updated] == [0]
+    assert active == {uri, "file:///tmp/old.png"}
+    assert missing == {1}
+
+
+def test_wallpaper_query_ignores_inactive_desktops(tmp_path: Path) -> None:
+    from dynamic_wallpaper.plasma import wallpaper_is_configured
+
+    frame = tmp_path / "frame-3.png"
+    frame.touch()
+    response = subprocess.CompletedProcess(
+        ["qdbus6"],
+        0,
+        json.dumps(
+            [{"id": 113, "screen": 0, "image": frame.resolve().as_uri()}]
+        ),
+        "",
+    )
+    with (
+        patch("dynamic_wallpaper.plasma.shutil.which", return_value="qdbus6"),
+        patch(
+            "dynamic_wallpaper.plasma.subprocess.run", return_value=response
+        ) as run,
+    ):
+        assert wallpaper_is_configured(frame)
+
+    script = run.call_args.args[0][4]
+    assert "desktop.screen >= 0" in script
+    assert "? activeDesktops" in script
