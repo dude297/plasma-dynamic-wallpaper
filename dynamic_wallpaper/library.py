@@ -220,3 +220,117 @@ def remove_wallpaper(wallpaper_id: str, root: Path | None = None) -> Path:
         raise LibraryError(f"wallpaper is not installed: {wallpaper_id}")
     shutil.rmtree(target)
     return target
+
+
+@dataclass(frozen=True)
+class InstalledWallpaper:
+    """One locally installed wallpaper and its managed cache directory."""
+
+    wallpaper_id: str
+    heic_file: Path
+    cache_dir: Path
+
+
+def cache_root() -> Path:
+    """Return the per-user cache root for managed wallpapers."""
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    return cache_home / "dynamic-wallpaper" / "wallpapers"
+
+
+def _normalize_wallpaper_id(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9._-]+", "-", value.casefold()).strip("-._")
+    if not normalized or not _ID_PATTERN.fullmatch(normalized):
+        raise LibraryError(f"invalid wallpaper name: {value!r}")
+    return normalized
+
+
+def installed_entries(
+    root: Path | None = None,
+) -> tuple[InstalledWallpaper, ...]:
+    """Return installed wallpapers with stable IDs and cache directories."""
+    root = root or library_root()
+    entries: list[InstalledWallpaper] = []
+    for heic_file in installed_wallpapers(root):
+        entries.append(
+            InstalledWallpaper(
+                wallpaper_id=heic_file.parent.name,
+                heic_file=heic_file,
+                cache_dir=cache_root() / heic_file.parent.name,
+            )
+        )
+    return tuple(entries)
+
+
+def find_installed(
+    wallpaper_id: str, root: Path | None = None
+) -> InstalledWallpaper:
+    """Return one installed wallpaper by exact local ID."""
+    normalized = _normalize_wallpaper_id(wallpaper_id)
+    for entry in installed_entries(root):
+        if entry.wallpaper_id == normalized:
+            return entry
+    raise LibraryError(f"wallpaper is not installed: {normalized}")
+
+
+def install_local_wallpaper(
+    source: Path,
+    *,
+    name: str | None = None,
+    root: Path | None = None,
+) -> InstalledWallpaper:
+    """Copy a local HEIC file into the managed wallpaper library."""
+    source = source.expanduser().resolve()
+    if not source.is_file():
+        raise LibraryError(f"wallpaper file not found: {source}")
+    if source.suffix.casefold() != ".heic":
+        raise LibraryError(f"wallpaper file must end in .heic: {source}")
+
+    wallpaper_id = _normalize_wallpaper_id(name or source.stem)
+    root = root or library_root()
+    destination_dir = root / wallpaper_id
+    destination = destination_dir / source.name
+    destination_dir.mkdir(parents=True, exist_ok=True)
+
+    temporary = destination.with_name(f".{destination.name}.tmp")
+    try:
+        shutil.copy2(source, temporary)
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+    return InstalledWallpaper(
+        wallpaper_id=wallpaper_id,
+        heic_file=destination,
+        cache_dir=cache_root() / wallpaper_id,
+    )
+
+
+def activate_wallpaper(
+    wallpaper_id: str,
+    *,
+    root: Path | None = None,
+    config_file: Path | None = None,
+) -> InstalledWallpaper:
+    """Make an installed wallpaper active in the user configuration."""
+    from .config import update_config_values
+
+    entry = find_installed(wallpaper_id, root)
+    update_config_values(
+        {
+            "HEIC_FILE": str(entry.heic_file),
+            "CACHE_DIR": str(entry.cache_dir),
+        },
+        config_file,
+    )
+    return entry
+
+
+def active_installed_id(
+    heic_file: Path, root: Path | None = None
+) -> str | None:
+    """Return the installed ID matching the configured HEIC file, if any."""
+    configured = heic_file.expanduser().resolve()
+    for entry in installed_entries(root):
+        if entry.heic_file.resolve() == configured:
+            return entry.wallpaper_id
+    return None

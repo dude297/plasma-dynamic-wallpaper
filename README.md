@@ -105,7 +105,14 @@ dynamic-wallpaper --dry-run       # Preview selected frame
 dynamic-wallpaper --at 18:00 --dry-run
 dynamic-wallpaper --force
 
-# Wallpaper library
+# Managed local wallpapers
+dynamic-wallpaper list
+dynamic-wallpaper install ~/Pictures/DynamicWallpapers/Sonoma.heic
+dynamic-wallpaper install ~/Pictures/Fuji.heic --name fuji
+dynamic-wallpaper use fuji
+dynamic-wallpaper remove fuji
+
+# Remote wallpaper catalog
 dynamic-wallpaper --library-list
 dynamic-wallpaper --library-search mountain
 dynamic-wallpaper --library-install WALLPAPER_ID
@@ -151,6 +158,24 @@ dynamic-wallpaper --doctor
 The command checks the Python version, required executables, configuration,
 HEIC source file, and cache-directory readiness. It exits with status 1 when
 any required check fails, so it can also be used in scripts.
+
+## Multiple wallpapers
+
+Local HEIC files can be imported into the managed per-user library. Each
+wallpaper receives its own cache directory, while switching preserves settings
+such as `SCREEN_IDS`:
+
+```bash
+dynamic-wallpaper install ~/Pictures/Fuji.heic --name fuji
+dynamic-wallpaper install ~/Pictures/Sonoma.heic --name sonoma
+dynamic-wallpaper list
+dynamic-wallpaper use sonoma
+dynamic-wallpaper --force
+```
+
+The active wallpaper is marked with `*` in `dynamic-wallpaper list`. The
+currently active wallpaper cannot be removed until another one is selected.
+
 
 ## Systemd
 

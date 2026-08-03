@@ -86,6 +86,39 @@ def load_config(path: Path | None = None) -> Config:
     )
 
 
+def update_config_values(
+    values: dict[str, str], path: Path | None = None
+) -> Path:
+    """Atomically update selected assignments while preserving other lines."""
+    path = path or config_path()
+    existing = (
+        path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    )
+    pending = dict(values)
+    output: list[str] = []
+
+    for line in existing:
+        assignment = _parse_assignment(line)
+        if assignment is None:
+            output.append(line)
+            continue
+        key, _ = assignment
+        if key in pending:
+            output.append(f"{key}={pending.pop(key)}")
+        else:
+            output.append(line)
+
+    if pending and output and output[-1].strip():
+        output.append("")
+    output.extend(f"{key}={value}" for key, value in pending.items())
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text("\n".join(output) + "\n", encoding="utf-8")
+    temporary.replace(path)
+    return path
+
+
 def validate_config(config: Config) -> None:
     """Validate configuration values before wallpaper processing starts."""
     if config.heic_file.suffix.casefold() != ".heic":

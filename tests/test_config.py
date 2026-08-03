@@ -197,3 +197,24 @@ def test_validate_config_rejects_invalid_screen_selection(
 
     with pytest.raises(ValueError, match="SCREEN_IDS"):
         validate_config(config)
+
+
+def test_update_config_values_preserves_unrelated_lines(
+    tmp_path: Path,
+) -> None:
+    from dynamic_wallpaper.config import update_config_values
+
+    path = tmp_path / "config"
+    path.write_text(
+        "# comment\nHEIC_FILE=/old.heic\nSCREEN_IDS=0,1\n",
+        encoding="utf-8",
+    )
+
+    update_config_values(
+        {"HEIC_FILE": "/new.heic", "CACHE_DIR": "/new-cache"}, path
+    )
+
+    assert path.read_text(encoding="utf-8") == (
+        "# comment\nHEIC_FILE=/new.heic\nSCREEN_IDS=0,1\n\n"
+        "CACHE_DIR=/new-cache\n"
+    )

@@ -107,3 +107,57 @@ def test_remove_wallpaper(tmp_path: Path) -> None:
 
     assert removed == installed
     assert not installed.exists()
+
+
+def test_install_local_wallpaper_and_find_installed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "Mountain View.heic"
+    source.write_bytes(b"local-heic")
+    root = tmp_path / "library"
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache-home"))
+
+    entry = library.install_local_wallpaper(source, root=root)
+
+    assert entry.wallpaper_id == "mountain-view"
+    assert entry.heic_file.read_bytes() == b"local-heic"
+    assert library.find_installed("mountain-view", root) == entry
+
+
+def test_activate_wallpaper_updates_only_managed_config_values(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "fuji.heic"
+    source.write_bytes(b"heic")
+    root = tmp_path / "library"
+    config_file = tmp_path / "config"
+    config_file.write_text(
+        "# keep this comment\nHEIC_FILE=/old.heic\nCACHE_DIR=/old-cache\n"
+        "SCREEN_IDS=0,1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache-home"))
+    library.install_local_wallpaper(source, name="fuji", root=root)
+
+    entry = library.activate_wallpaper(
+        "fuji", root=root, config_file=config_file
+    )
+
+    text = config_file.read_text(encoding="utf-8")
+    assert f"HEIC_FILE={entry.heic_file}" in text
+    assert f"CACHE_DIR={entry.cache_dir}" in text
+    assert "SCREEN_IDS=0,1" in text
+    assert "# keep this comment" in text
+
+
+def test_active_installed_id_matches_configured_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "fuji.heic"
+    source.write_bytes(b"heic")
+    root = tmp_path / "library"
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache-home"))
+    entry = library.install_local_wallpaper(source, name="fuji", root=root)
+
+    assert library.active_installed_id(entry.heic_file, root) == "fuji"
+    assert library.active_installed_id(tmp_path / "other.heic", root) is None

@@ -14,6 +14,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Managed multi-wallpaper commands: `list`, `install`, `use`, and `remove`.
+- Isolated cache directories for each managed wallpaper.
+- Atomic configuration switching that preserves screen-selection settings.
+
 - `--current` reports the scheduled frame and verifies active Plasma desktop paths.
 
 - Add active-screen autodetection and ignore inactive Plasma containments.

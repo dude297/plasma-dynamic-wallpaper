@@ -15,7 +15,11 @@ from .engine import WallpaperEngine
 from .installer import InstallError, install_user
 from .library import (
     LibraryError,
+    active_installed_id,
+    activate_wallpaper,
     find_entry,
+    install_local_wallpaper,
+    installed_entries,
     install_wallpaper,
     installed_wallpapers,
     load_catalog,
@@ -177,6 +181,21 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="apply the wallpaper even if it is already current",
     )
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=("list", "use", "install", "remove"),
+        help="manage locally installed dynamic wallpapers",
+    )
+    parser.add_argument(
+        "command_value",
+        nargs="?",
+        help="wallpaper ID or local HEIC file for the management command",
+    )
+    parser.add_argument(
+        "--name",
+        help="ID to use when installing a local HEIC wallpaper",
+    )
 
     return parser
 
@@ -206,6 +225,59 @@ def main() -> int:
             for line in install_user(enable_timer=args.setup):
                 print(line)
             return 0
+
+        if args.command == "list":
+            if args.command_value is not None:
+                raise LibraryError("list does not accept an argument")
+            entries = installed_entries()
+            active_id: str | None = None
+            try:
+                active_id = active_installed_id(load_config().heic_file)
+            except (FileNotFoundError, ValueError):
+                pass
+            if not entries:
+                print("No managed wallpapers installed.")
+                return 0
+            for entry in entries:
+                marker = "*" if entry.wallpaper_id == active_id else " "
+                print(f"{marker} {entry.wallpaper_id}: {entry.heic_file}")
+            return 0
+
+        if args.command == "install":
+            if args.command_value is None:
+                raise LibraryError("install requires a local HEIC file")
+            entry = install_local_wallpaper(
+                Path(args.command_value), name=args.name
+            )
+            print(f"Installed {entry.wallpaper_id}: {entry.heic_file}")
+            print(f"Use it with: dynamic-wallpaper use {entry.wallpaper_id}")
+            return 0
+
+        if args.command == "use":
+            if args.command_value is None:
+                raise LibraryError("use requires a wallpaper ID")
+            entry = activate_wallpaper(args.command_value)
+            print(f"Active wallpaper: {entry.wallpaper_id}")
+            print(f"Source HEIC: {entry.heic_file}")
+            print(f"Cache directory: {entry.cache_dir}")
+            return 0
+
+        if args.command == "remove":
+            if args.command_value is None:
+                raise LibraryError("remove requires a wallpaper ID")
+            config = load_config()
+            active_id = active_installed_id(config.heic_file)
+            if active_id == args.command_value:
+                raise LibraryError(
+                    "cannot remove the active wallpaper; use another "
+                    "wallpaper first"
+                )
+            removed = remove_wallpaper(args.command_value)
+            print(f"Removed wallpaper: {removed}")
+            return 0
+
+        if args.command is None and args.name is not None:
+            raise LibraryError("--name may only be used with install")
 
         if args.library_list or args.library_search is not None:
             entries = load_catalog()
