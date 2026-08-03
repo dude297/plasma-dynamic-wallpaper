@@ -39,7 +39,7 @@ Requires:
 
 ## Easy installation
 
-After the package is published, install it in an isolated environment with
+Install the stable package in an isolated environment with
 `pipx`:
 
 ```bash
@@ -96,6 +96,7 @@ dynamic-wallpaper                 # Apply wallpaper
 dynamic-wallpaper --schedule      # Show Apple schedule
 dynamic-wallpaper --config        # Show active configuration paths
 dynamic-wallpaper --status        # Show last applied wallpaper
+dynamic-wallpaper --current       # Compare schedule with active desktops
 dynamic-wallpaper --cache-status  # Show cache freshness and frame count
 dynamic-wallpaper --rebuild-cache # Force frame re-extraction
 dynamic-wallpaper --inspect       # View decoded metadata
@@ -210,11 +211,26 @@ User configuration and cache are preserved by default. To remove them too:
 Both scripts prompt before making changes. Pass `--yes` for unattended use.
 Existing configuration is backed up before every reinstall.
 
+## Distribution
+
+Stable releases are published as wheel and source distributions on GitHub and
+PyPI. The recommended end-user installation is:
+
+```bash
+pipx install plasma-dynamic-wallpaper
+dynamic-wallpaper --setup
+```
+
+The package can also be invoked without the console-script wrapper:
+
+```bash
+python -m dynamic_wallpaper --version
+```
+
 ## Roadmap
 
 - Curated wallpaper catalog growth
 - Additional desktop environments
-- PyPI publishing
 - Signed release artifacts
 - Additional desktop backends
 

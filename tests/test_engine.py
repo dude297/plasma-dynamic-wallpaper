@@ -328,3 +328,28 @@ def test_status_reports_persisted_wallpaper(tmp_path: Path) -> None:
     assert "Last frame: 3" in lines
     assert "Applied at: 2026-07-24T20:30:00+00:00" in lines
     assert "Wallpaper file: present" in lines
+
+
+def test_current_reports_scheduled_and_plasma_state(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+    frame = tmp_path / "frame-0.png"
+    frame.write_bytes(b"png")
+    engine._frames = [frame]
+    engine._metadata = {"ti": [{"t": 0.0, "i": 0}]}
+
+    with patch(
+        "dynamic_wallpaper.engine.plasma_desktops",
+        return_value=[
+            {
+                "id": 113,
+                "screen": 0,
+                "plugin": "org.kde.image",
+                "image": frame.resolve().as_uri(),
+            }
+        ],
+    ):
+        lines = engine.current(datetime(2026, 7, 23, 8, 15))
+
+    assert "Scheduled frame: 0/0" in lines
+    assert "Active Plasma desktops: 1" in lines
+    assert "Screen 0: plugin=org.kde.image exists=yes matches=yes" in lines

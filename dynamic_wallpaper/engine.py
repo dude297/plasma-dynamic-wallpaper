@@ -17,7 +17,7 @@ from .cache import (
 from .config import Config
 from .logging import get_logger
 from .metadata import load_h24_metadata
-from .plasma import set_wallpaper, wallpaper_is_configured
+from .plasma import plasma_desktops, set_wallpaper, wallpaper_is_configured
 from .scheduler import format_schedule, select_frame
 from .state import is_current, load_state, save_state
 
@@ -112,6 +112,41 @@ class WallpaperEngine:
             "Wallpaper file: "
             + ("present" if Path(wallpaper).is_file() else "missing")
         )
+        return lines
+
+    def current(self, selected_time: datetime) -> list[str]:
+        """Report the scheduled frame and active Plasma desktop state."""
+        index, wallpaper, entry = select_frame(
+            self.frames,
+            self.metadata,
+            selected_time,
+        )
+        lines = [
+            f"Time: {selected_time:%Y-%m-%d %H:%M}",
+            f"Scheduled frame: {index}/{len(self.frames) - 1}",
+            f"Scheduled image: {wallpaper}",
+            f"Schedule entry: {entry.minutes // 60:02d}:{entry.minutes % 60:02d}",
+        ]
+        records = plasma_desktops(self.config.screen_ids)
+        if not records:
+            lines.append("Active Plasma desktops: none")
+            return lines
+
+        lines.append(f"Active Plasma desktops: {len(records)}")
+        expected = wallpaper.resolve()
+        for record in records:
+            screen = record.get("screen", "unknown")
+            plugin = record.get("plugin", "unknown")
+            image = record.get("image")
+            configured = _path_from_file_uri(image)
+            exists = configured.is_file() if configured is not None else False
+            matches = _configured_path_matches(configured, expected)
+            lines.append(
+                f"Screen {screen}: plugin={plugin} "
+                f"exists={'yes' if exists else 'no'} "
+                f"matches={'yes' if matches else 'no'}"
+            )
+            lines.append(f"  Image: {image or '<missing>'}")
         return lines
 
     def cache_status(self) -> list[str]:
@@ -250,6 +285,31 @@ class WallpaperEngine:
             (perf_counter() - operation_started) * 1000,
         )
         return output
+
+
+def _path_from_file_uri(value: object) -> Path | None:
+    if not isinstance(value, str) or not value.startswith("file://"):
+        return None
+    from urllib.parse import unquote, urlparse
+
+    parsed = urlparse(value)
+    if parsed.scheme != "file" or parsed.netloc not in {"", "localhost"}:
+        return None
+    return Path(unquote(parsed.path))
+
+
+def _configured_path_matches(configured: Path | None, expected: Path) -> bool:
+    if configured is None or not configured.is_file():
+        return False
+    resolved = configured.resolve()
+    if resolved == expected:
+        return True
+    return (
+        resolved.parent.name == ".plasma-render"
+        and resolved.parent.parent == expected.parent
+        and resolved.name.startswith(expected.stem + "-")
+        and resolved.suffix == expected.suffix
+    )
 
 
 def _json_default(value: Any) -> Any:

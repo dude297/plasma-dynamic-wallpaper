@@ -154,6 +154,82 @@ print(JSON.stringify({{updated, active}}));
     )
 
 
+def plasma_desktops(
+    screen_ids: tuple[int, ...] | None = None,
+) -> list[dict[str, object]]:
+    """Return active Plasma desktop wallpaper configuration records."""
+    qdbus = shutil.which("qdbus6")
+    if qdbus is None:
+        raise PlasmaError("qdbus6 was not found")
+
+    encoded_screens = json.dumps(
+        list(screen_ids) if screen_ids is not None else None
+    )
+    script = f"""
+const requestedScreens = {encoded_screens};
+const activeDesktops = desktops().filter(desktop => desktop.screen >= 0);
+const selected = requestedScreens === null
+    ? activeDesktops
+    : activeDesktops.filter(
+        desktop => requestedScreens.includes(desktop.screen)
+    );
+const result = [];
+for (let index = 0; index < selected.length; index++) {{
+    const desktop = selected[index];
+    desktop.currentConfigGroup = [
+        "Wallpaper",
+        "org.kde.image",
+        "General"
+    ];
+    result.push({{
+        id: desktop.id,
+        screen: desktop.screen,
+        plugin: desktop.wallpaperPlugin,
+        image: desktop.readConfig("Image", "")
+    }});
+}}
+print(JSON.stringify(result));
+""".strip()
+
+    try:
+        completed = subprocess.run(
+            [
+                qdbus,
+                "org.kde.plasmashell",
+                "/PlasmaShell",
+                "org.kde.PlasmaShell.evaluateScript",
+                script,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=_QDBUS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise PlasmaError("Plasma wallpaper query timed out") from exc
+    except subprocess.CalledProcessError as exc:
+        message = exc.stderr.strip() or exc.stdout.strip()
+        raise PlasmaError(
+            message or "Could not query Plasma desktop configuration"
+        ) from exc
+
+    try:
+        records = json.loads(completed.stdout.strip())
+    except json.JSONDecodeError as exc:
+        raise PlasmaError(
+            "Plasma returned an invalid desktop configuration response"
+        ) from exc
+    if not isinstance(records, list):
+        raise PlasmaError(
+            "Plasma returned an invalid desktop configuration response"
+        )
+    if not all(isinstance(record, dict) for record in records):
+        raise PlasmaError(
+            "Plasma returned an invalid desktop configuration record"
+        )
+    return records
+
+
 def wallpaper_is_configured(
     image_path: Path, screen_ids: tuple[int, ...] | None = None
 ) -> bool:

@@ -86,6 +86,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="show the last successfully applied wallpaper",
     )
     actions.add_argument(
+        "--current",
+        action="store_true",
+        help="show the scheduled frame and active Plasma desktop state",
+    )
+    actions.add_argument(
         "--cache-status",
         action="store_true",
         help="show cache freshness and extracted frame count",
@@ -256,6 +261,11 @@ def main() -> int:
 
         if args.status:
             for line in engine.status():
+                print(line)
+            return 0
+
+        if args.current:
+            for line in engine.current(datetime.now()):
                 print(line)
             return 0
 

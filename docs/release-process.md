@@ -4,12 +4,12 @@ The package version in `pyproject.toml` is the release source of truth.
 
 ## Release candidates
 
-With package version `0.1.0`, valid tags include:
+With package version `0.2.0`, valid tags include:
 
 ```text
-v0.1.0-rc1
-v0.1.0-rc2
-v0.1.0-rc10
+v0.2.0-rc1
+v0.2.0-rc2
+v0.2.0-rc10
 ```
 
 RC tags create GitHub pre-releases and do not replace the latest stable release.
@@ -19,7 +19,7 @@ RC tags create GitHub pre-releases and do not replace the latest stable release.
 The stable tag must match exactly:
 
 ```text
-v0.1.0
+v0.2.0
 ```
 
 ## Checklist
@@ -51,17 +51,26 @@ v0.1.0
 Example release candidate:
 
 ```bash
-git tag -a v0.1.0-rc6 -m "Release v0.1.0-rc6"
-git push origin v0.1.0-rc6
+git tag -a v0.2.0-rc1 -m "Release v0.2.0-rc1"
+git push origin v0.2.0-rc1
 ```
 
 Example stable release:
 
 ```bash
-git tag -a v0.1.0 -m "Release v0.1.0"
-git push origin v0.1.0
+git tag -a v0.2.0 -m "Release v0.1.0"
+git push origin v0.2.0
 ```
 
 The release workflow validates formatting, lint, tests, coverage, distribution
 metadata, installed CLI behavior, tag/version agreement, and changelog content
-before creating the GitHub release and attaching the wheel and source archive.
+before creating the GitHub release and attaching the wheel and source archive. Stable tags also publish the verified distributions to PyPI through GitHub trusted publishing; release-candidate tags remain GitHub-only pre-releases.
+
+
+## PyPI trusted publishing setup
+
+Before the first stable release, create a PyPI project or pending publisher for
+`plasma-dynamic-wallpaper` and authorize this repository's
+`.github/workflows/release.yml` workflow. No long-lived API token is stored in
+GitHub. The publish step runs only for stable tags such as `v0.2.0`; RC tags are
+never uploaded to PyPI.

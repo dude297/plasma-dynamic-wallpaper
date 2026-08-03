@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -165,3 +166,8 @@ jobs:
             dist/*.whl \
             dist/*.tar.gz \
             "${release_flags[@]}"
+
+
+      - name: Publish stable distribution to PyPI
+        if: steps.release-metadata.outputs.prerelease == 'false'
+        uses: pypa/gh-action-pypi-publish@release/v1

@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Packaging
+
+- Prepare version 0.2.0 for `pipx` and PyPI installation.
+- Publish stable tags to PyPI with GitHub trusted publishing while keeping RC tags GitHub-only.
+
+### Added
+
+- `--current` reports the scheduled frame and verifies active Plasma desktop paths.
+
 - Add active-screen autodetection and ignore inactive Plasma containments.
 - Treat temporarily unavailable configured screens as retryable warnings.
 

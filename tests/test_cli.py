@@ -60,6 +60,7 @@ def test_build_parser_exposes_expected_options() -> None:
         "--doctor",
         "--config",
         "--status",
+        "--current",
         "--cache-status",
         "--rebuild-cache",
         "--inspect",
@@ -190,6 +191,27 @@ def test_main_prints_status(
         "Last wallpaper: /cache/frame-2.png\nLast frame: 2\n"
     )
     engine.status.assert_called_once_with()
+    engine.apply.assert_not_called()
+
+
+def test_main_prints_current_state(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    engine = Mock()
+    engine.current.return_value = [
+        "Scheduled frame: 2/6",
+        "Screen 0: plugin=org.kde.image exists=yes matches=yes",
+    ]
+
+    result, _ = run_main_with_engine(monkeypatch, ["--current"], engine)
+
+    assert result == 0
+    assert capsys.readouterr().out == (
+        "Scheduled frame: 2/6\n"
+        "Screen 0: plugin=org.kde.image exists=yes matches=yes\n"
+    )
+    engine.current.assert_called_once()
     engine.apply.assert_not_called()
 
 
