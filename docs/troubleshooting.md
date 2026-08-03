@@ -113,3 +113,31 @@ journalctl --user -u dynamic-wallpaper.service -n 100
 
 Do not include private filesystem paths or wallpaper files unless they are
 necessary to reproduce the issue.
+
+
+## Multi-monitor service reports an invalid verification response
+
+Older development builds printed one JSON object per Plasma desktop. Plasma
+can concatenate those objects without newlines, causing the user service to
+exit even though every screen accepted the wallpaper. Upgrade to a build that
+uses a single verification payload, then reset and test the service:
+
+```bash
+systemctl --user reset-failed dynamic-wallpaper.service
+systemctl --user start dynamic-wallpaper.service
+systemctl --user status dynamic-wallpaper.service --no-pager
+```
+
+A successful oneshot finishes as inactive with a successful result.
+
+## Plasma points to a missing `.plasma-render` file
+
+Current builds protect all wallpaper aliases referenced by any desktop before
+pruning inactive aliases. To recover an older installation, stop the timer,
+apply a persistent extracted frame, upgrade, and then restart the timer.
+
+```bash
+systemctl --user stop dynamic-wallpaper.timer
+dynamic-wallpaper --force
+systemctl --user start dynamic-wallpaper.timer
+```

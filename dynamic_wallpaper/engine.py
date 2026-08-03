@@ -17,7 +17,7 @@ from .cache import (
 from .config import Config
 from .logging import get_logger
 from .metadata import load_h24_metadata
-from .plasma import set_wallpaper
+from .plasma import set_wallpaper, wallpaper_is_configured
 from .scheduler import format_schedule, select_frame
 from .state import is_current, load_state, save_state
 
@@ -211,8 +211,15 @@ class WallpaperEngine:
                 else "Would apply"
             )
             output.append(f"{action} frame {index}/{last_index}: {wallpaper}")
-        elif not force and is_current(self.state_file, wallpaper):
-            logger.info("Skipping frame because persisted state is current")
+        elif (
+            not force
+            and is_current(self.state_file, wallpaper)
+            and wallpaper_is_configured(wallpaper, self.config.screen_ids)
+        ):
+            logger.info(
+                "Skipping frame because state and Plasma configuration "
+                "are current"
+            )
             output.append(
                 f"Skipped frame {index}/{last_index}: already applied"
             )

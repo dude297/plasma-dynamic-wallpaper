@@ -54,6 +54,7 @@ def test_run_exiftool_requests_h24_metadata() -> None:
         check=True,
         capture_output=True,
         text=True,
+        timeout=30,
     )
 
 

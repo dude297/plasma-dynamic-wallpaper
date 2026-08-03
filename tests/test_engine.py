@@ -216,6 +216,10 @@ def test_apply_skips_frame_that_is_already_current(tmp_path: Path) -> None:
 
     with (
         patch("dynamic_wallpaper.engine.is_current", return_value=True),
+        patch(
+            "dynamic_wallpaper.engine.wallpaper_is_configured",
+            return_value=True,
+        ),
         patch("dynamic_wallpaper.engine.set_wallpaper") as set_wallpaper,
         patch("dynamic_wallpaper.engine.save_state") as save_state,
     ):
@@ -224,6 +228,30 @@ def test_apply_skips_frame_that_is_already_current(tmp_path: Path) -> None:
     assert output[0] == "Skipped frame 0/0: already applied"
     set_wallpaper.assert_not_called()
     save_state.assert_not_called()
+
+
+def test_apply_reapplies_when_plasma_configuration_drifted(
+    tmp_path: Path,
+) -> None:
+    engine = make_engine(tmp_path)
+    frame = tmp_path / "frame-0.png"
+    engine._frames = [frame]
+    engine._metadata = {"ti": [{"t": 0.0, "i": 0}]}
+
+    with (
+        patch("dynamic_wallpaper.engine.is_current", return_value=True),
+        patch(
+            "dynamic_wallpaper.engine.wallpaper_is_configured",
+            return_value=False,
+        ),
+        patch("dynamic_wallpaper.engine.set_wallpaper") as set_wallpaper,
+        patch("dynamic_wallpaper.engine.save_state") as save_state,
+    ):
+        output = engine.apply(datetime(2026, 7, 23, 8, 15))
+
+    assert output[0] == f"Applied frame 0/0: {frame}"
+    set_wallpaper.assert_called_once_with(frame, None)
+    save_state.assert_called_once_with(engine.state_file, frame, 0)
 
 
 def test_apply_sets_wallpaper_and_saves_state(tmp_path: Path) -> None:

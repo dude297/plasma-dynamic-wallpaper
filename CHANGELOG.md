@@ -17,6 +17,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `file://` catalogs for development and mirrors.
 - Wallpaper catalog schema and distribution guidance.
 
+### Fixed
+
+- Multi-monitor verification now returns one JSON document instead of
+  concatenated per-screen objects.
+- Screen targeting now updates only the requested Plasma containments.
+- Render-alias cleanup preserves every file still referenced by a desktop.
+- Timer runs reconcile persisted state with Plasma configuration, recovering
+  automatically after logout, shell restart, or a missing render alias.
+- External helper commands now have bounded timeouts instead of hanging a
+  systemd oneshot indefinitely.
+
 ### Changed
 
 - Package discovery now includes application data templates required by wheel

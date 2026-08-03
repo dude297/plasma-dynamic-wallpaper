@@ -95,7 +95,10 @@ def extract_frames(heic_file: Path, cache_dir: Path) -> list[Path]:
                 check=True,
                 capture_output=True,
                 text=True,
+                timeout=300,
             )
+        except subprocess.TimeoutExpired as exc:
+            raise CacheError("heif-convert timed out") from exc
         except FileNotFoundError as exc:
             raise CacheError(
                 "heif-convert is required but was not found"

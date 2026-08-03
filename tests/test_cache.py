@@ -115,6 +115,7 @@ def test_extract_frames_removes_old_frames_and_records_source(
             "check": True,
             "capture_output": True,
             "text": True,
+            "timeout": 300,
         }
         (output_path.parent / "frame-1.png").touch()
         (output_path.parent / "frame-2.png").touch()

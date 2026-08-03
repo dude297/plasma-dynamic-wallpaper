@@ -34,7 +34,10 @@ def _run_exiftool(heic_file: Path) -> list[dict[str, Any]]:
             check=True,
             capture_output=True,
             text=True,
+            timeout=30,
         )
+    except subprocess.TimeoutExpired as exc:
+        raise MetadataError("exiftool timed out") from exc
     except FileNotFoundError as exc:
         raise MetadataError("exiftool is required but was not found") from exc
     except subprocess.CalledProcessError as exc:
