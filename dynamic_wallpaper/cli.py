@@ -28,7 +28,7 @@ from .library import (
 )
 from .logging import configure_logging, get_logger
 from .metadata import MetadataError
-from .plasma import PlasmaError
+from .plasma import PlasmaError, wait_for_plasma
 from .scheduler import ScheduleError
 from .state import StateError
 
@@ -118,6 +118,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--extract",
         action="store_true",
         help="extract and cache frames without changing wallpaper",
+    )
+    actions.add_argument(
+        "--startup",
+        action="store_true",
+        help="wait for Plasma readiness and apply the current frame",
     )
     actions.add_argument(
         "--setup",
@@ -368,12 +373,16 @@ def main() -> int:
             print(engine.extract())
             return 0
 
+        if args.startup:
+            logger.info("Waiting for Plasma desktop readiness")
+            wait_for_plasma(config.screen_ids)
+
         selected_time = args.at or datetime.now()
 
         for line in engine.apply(
             selected_time,
             dry_run=args.dry_run,
-            force=args.force,
+            force=args.force or args.startup,
         ):
             print(line)
 

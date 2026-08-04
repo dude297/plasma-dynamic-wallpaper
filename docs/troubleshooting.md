@@ -141,3 +141,33 @@ systemctl --user stop dynamic-wallpaper.timer
 dynamic-wallpaper --force
 systemctl --user start dynamic-wallpaper.timer
 ```
+
+## Wallpaper is not calibrated immediately after login
+
+Current systemd units invoke `dynamic-wallpaper --startup`. That mode waits up
+to 45 seconds for Plasma's D-Bus service and at least one active desktop
+containment, then reads the current time and force-applies the matching frame.
+It does not depend on a fixed sleep, so slower login sessions and shell restarts
+are handled consistently.
+
+Reinstall the user units after upgrading an older setup:
+
+```bash
+dynamic-wallpaper --setup
+systemctl --user daemon-reload
+systemctl --user restart dynamic-wallpaper.timer
+```
+
+Test the startup path directly with:
+
+```bash
+dynamic-wallpaper --startup --verbose
+```
+
+If it times out, inspect Plasma and the service journal rather than increasing
+the timer delay:
+
+```bash
+systemctl --user status plasma-plasmashell.service
+journalctl --user -u dynamic-wallpaper.service -n 100 --no-pager
+```

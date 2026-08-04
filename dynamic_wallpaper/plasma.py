@@ -6,7 +6,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
-from time import perf_counter, time_ns
+from time import monotonic, perf_counter, sleep, time_ns
 from urllib.parse import unquote, urlparse
 from uuid import uuid4
 
@@ -152,6 +152,62 @@ print(JSON.stringify({{updated, active}}));
         len(updated),
         elapsed_ms,
     )
+
+
+def wait_for_plasma(
+    screen_ids: tuple[int, ...] | None = None,
+    *,
+    timeout: float = 45.0,
+    interval: float = 1.0,
+) -> list[dict[str, object]]:
+    """Wait until Plasma exposes at least one active target desktop.
+
+    Plasma can acquire its D-Bus name before desktop containments are ready,
+    especially during login or after a shell restart. This bounded retry keeps
+    startup synchronization inside the application instead of relying on a
+    fragile fixed systemd delay.
+    """
+    if timeout <= 0:
+        raise ValueError("Plasma readiness timeout must be positive")
+    if interval <= 0:
+        raise ValueError("Plasma readiness interval must be positive")
+
+    started = monotonic()
+    last_error = "Plasma reported no active desktop containments"
+    attempts = 0
+
+    while True:
+        attempts += 1
+        try:
+            records = plasma_desktops(screen_ids)
+        except PlasmaError as exc:
+            last_error = str(exc)
+        else:
+            if records:
+                logger.info(
+                    "Plasma became ready with %d active desktop(s) after %d attempt(s)",
+                    len(records),
+                    attempts,
+                )
+                return records
+            last_error = "Plasma reported no active desktop containments"
+
+        elapsed = monotonic() - started
+        if elapsed >= timeout:
+            raise PlasmaError(
+                f"Plasma did not become ready within {timeout:g} seconds: "
+                f"{last_error}"
+            )
+
+        remaining = timeout - elapsed
+        delay = min(interval, remaining)
+        logger.debug(
+            "Plasma is not ready yet (attempt %d): %s; retrying in %.1f s",
+            attempts,
+            last_error,
+            delay,
+        )
+        sleep(delay)
 
 
 def plasma_desktops(

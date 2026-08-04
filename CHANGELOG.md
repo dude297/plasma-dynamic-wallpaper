@@ -35,6 +35,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Fixed
 
+- User systemd runs now wait for active Plasma desktop containments before
+  selecting and force-applying the current frame, preventing login-time races
+  and recalibrating after Plasma Shell restarts.
 - Multi-monitor verification now returns one JSON document instead of
   concatenated per-screen objects.
 - Screen targeting now updates only the requested Plasma containments.

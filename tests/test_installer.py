@@ -26,7 +26,9 @@ def test_install_user_writes_templates_without_enabling(
     service = config_home / "systemd" / "user" / "dynamic-wallpaper.service"
     timer = config_home / "systemd" / "user" / "dynamic-wallpaper.timer"
     assert config.is_file()
-    assert "ExecStart=/bin/pdw" in service.read_text(encoding="utf-8")
+    service_text = service.read_text(encoding="utf-8")
+    assert "ExecStart=/bin/pdw --startup" in service_text
+    assert "TimeoutStartSec=75s" in service_text
     assert timer.is_file()
     assert "Timer enabled: no" in lines
 

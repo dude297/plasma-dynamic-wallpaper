@@ -414,3 +414,78 @@ def test_wallpaper_query_ignores_inactive_desktops(tmp_path: Path) -> None:
     script = run.call_args.args[0][4]
     assert "desktop.screen >= 0" in script
     assert "? activeDesktops" in script
+
+
+def test_wait_for_plasma_returns_when_active_desktop_is_ready() -> None:
+    from dynamic_wallpaper.plasma import wait_for_plasma
+
+    records = [{"id": 113, "screen": 0, "image": "file:///wallpaper.png"}]
+    with (
+        patch(
+            "dynamic_wallpaper.plasma.plasma_desktops", return_value=records
+        ),
+        patch("dynamic_wallpaper.plasma.sleep") as sleep,
+    ):
+        assert wait_for_plasma((0,)) == records
+
+    sleep.assert_not_called()
+
+
+def test_wait_for_plasma_retries_transient_failures() -> None:
+    from dynamic_wallpaper.plasma import wait_for_plasma
+
+    records = [{"id": 113, "screen": 0, "image": "file:///wallpaper.png"}]
+    with (
+        patch(
+            "dynamic_wallpaper.plasma.plasma_desktops",
+            side_effect=[PlasmaError("service unavailable"), [], records],
+        ) as query,
+        patch("dynamic_wallpaper.plasma.monotonic", return_value=0.0),
+        patch("dynamic_wallpaper.plasma.sleep") as sleep,
+    ):
+        assert wait_for_plasma(timeout=10, interval=0.5) == records
+
+    assert query.call_count == 3
+    assert sleep.call_count == 2
+    sleep.assert_called_with(0.5)
+
+
+def test_wait_for_plasma_times_out_with_last_error() -> None:
+    from dynamic_wallpaper.plasma import wait_for_plasma
+
+    with (
+        patch(
+            "dynamic_wallpaper.plasma.plasma_desktops",
+            side_effect=PlasmaError("D-Bus name is unavailable"),
+        ),
+        patch("dynamic_wallpaper.plasma.monotonic", side_effect=[0.0, 5.0]),
+        patch("dynamic_wallpaper.plasma.sleep") as sleep,
+        pytest.raises(
+            PlasmaError,
+            match=(
+                "did not become ready within 5 seconds: "
+                "D-Bus name is unavailable"
+            ),
+        ),
+    ):
+        wait_for_plasma(timeout=5)
+
+    sleep.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("timeout", "interval", "message"),
+    [
+        (0.0, 1.0, "timeout must be positive"),
+        (5.0, 0.0, "interval must be positive"),
+    ],
+)
+def test_wait_for_plasma_rejects_invalid_timing(
+    timeout: float,
+    interval: float,
+    message: str,
+) -> None:
+    from dynamic_wallpaper.plasma import wait_for_plasma
+
+    with pytest.raises(ValueError, match=message):
+        wait_for_plasma(timeout=timeout, interval=interval)

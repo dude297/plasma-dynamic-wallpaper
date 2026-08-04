@@ -180,11 +180,21 @@ currently active wallpaper cannot be removed until another one is selected.
 ## Systemd
 
 The installer enables a user timer that updates the wallpaper every five minutes.
+The service uses `--startup`, which waits for Plasma to expose an active desktop
+before selecting the current time and force-applying the matching frame. This
+avoids fixed-delay races during login and recalibrates automatically after a
+Plasma Shell restart.
 
 ```bash
 systemctl --user status dynamic-wallpaper.timer
 systemctl --user start dynamic-wallpaper.service
 journalctl --user -u dynamic-wallpaper.service -n 20
+```
+
+The same synchronization path can be tested manually:
+
+```bash
+dynamic-wallpaper --startup --verbose
 ```
 
 ## Project Layout

@@ -66,6 +66,7 @@ def test_build_parser_exposes_expected_options() -> None:
         "--inspect",
         "--schedule",
         "--extract",
+        "--startup",
         "--setup",
         "--setup-no-enable",
         "--library-list",
@@ -341,6 +342,38 @@ def test_main_applies_selected_time_and_flags(
         "dry_run": True,
         "force": True,
     }
+
+
+def test_main_startup_waits_for_plasma_and_forces_current_frame(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    engine.apply.return_value = []
+    current_time = datetime(2026, 8, 4, 7, 30)
+    config = Config(
+        heic_file=Path("/wallpapers/Fuji.heic"),
+        cache_dir=Path("/cache/Fuji"),
+        screen_ids=(0, 1),
+    )
+    ready = Mock()
+
+    monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper", "--startup"])
+    monkeypatch.setattr(cli, "load_config", Mock(return_value=config))
+    monkeypatch.setattr(cli, "validate_config", Mock())
+    monkeypatch.setattr(cli, "WallpaperEngine", Mock(return_value=engine))
+    monkeypatch.setattr(cli, "wait_for_plasma", ready)
+
+    with patch("dynamic_wallpaper.cli.datetime") as mocked_datetime:
+        mocked_datetime.now.return_value = current_time
+        result = cli.main()
+
+    assert result == 0
+    ready.assert_called_once_with((0, 1))
+    engine.apply.assert_called_once_with(
+        current_time,
+        dry_run=False,
+        force=True,
+    )
 
 
 def test_main_uses_current_time_by_default(
