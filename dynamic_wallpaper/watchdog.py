@@ -1,9 +1,10 @@
-"""Recover the wallpaper after KDE Plasma Shell restarts."""
+"""Recover the wallpaper after Plasma restarts and system resume."""
 
 from __future__ import annotations
 
 import shutil
 import subprocess
+import time
 from collections.abc import Callable
 from time import sleep
 
@@ -12,10 +13,19 @@ from .logging import get_logger
 
 logger = get_logger("watchdog")
 _QDBUS_TIMEOUT_SECONDS = 10
+_RESUME_GAP_SECONDS = 10.0
 
 
 class WatchdogError(RuntimeError):
     """Raised when the Plasma session watchdog cannot run."""
+
+
+def session_uptime() -> float:
+    """Return a monotonic clock that includes time spent suspended."""
+    clock_boottime = getattr(time, "CLOCK_BOOTTIME", None)
+    if clock_boottime is not None:
+        return time.clock_gettime(clock_boottime)
+    return time.monotonic()
 
 
 def plasma_name_owner() -> str | None:
@@ -80,15 +90,20 @@ def watch_plasma(
     interval: float = 2.0,
     owner_query: Callable[[], str | None] = plasma_name_owner,
     sleep_fn: Callable[[float], None] = sleep,
+    clock_fn: Callable[[], float] = session_uptime,
+    resume_gap: float = _RESUME_GAP_SECONDS,
     max_checks: int | None = None,
 ) -> None:
-    """Watch the Plasma D-Bus owner and trigger recovery after restarts."""
+    """Recover after Plasma restarts and system suspend/resume cycles."""
     if interval <= 0:
         raise ValueError("watchdog interval must be positive")
+    if resume_gap <= 0:
+        raise ValueError("watchdog resume_gap must be positive")
     if max_checks is not None and max_checks < 0:
         raise ValueError("watchdog max_checks cannot be negative")
 
     previous_owner = owner_query()
+    previous_tick = clock_fn()
     logger.info(
         "Plasma session watchdog started; current owner: %s",
         previous_owner or "unavailable",
@@ -98,7 +113,17 @@ def watch_plasma(
     while max_checks is None or checks < max_checks:
         sleep_fn(interval)
         checks += 1
+        current_tick = clock_fn()
+        elapsed = current_tick - previous_tick
+        previous_tick = current_tick
+        resumed = elapsed > interval + resume_gap
         current_owner = owner_query()
+        recovery_reason: str | None = None
+
+        if resumed:
+            recovery_reason = (
+                "system resumed after an %.1f-second watchdog gap" % elapsed
+            )
 
         if current_owner is None:
             if previous_owner is not None:
@@ -107,21 +132,17 @@ def watch_plasma(
             continue
 
         if previous_owner is None:
-            logger.info(
-                "Plasma Shell returned on D-Bus as %s; reapplying wallpaper",
-                current_owner,
+            recovery_reason = (
+                f"Plasma Shell returned on D-Bus as {current_owner}"
             )
-            try:
-                trigger()
-            except WatchdogError as exc:
-                logger.error("Could not request wallpaper recovery: %s", exc)
         elif current_owner != previous_owner:
-            logger.info(
-                "Plasma Shell D-Bus owner changed from %s to %s; "
-                "reapplying wallpaper",
-                previous_owner,
-                current_owner,
+            recovery_reason = (
+                "Plasma Shell D-Bus owner changed from "
+                f"{previous_owner} to {current_owner}"
             )
+
+        if recovery_reason is not None:
+            logger.info("%s; reapplying wallpaper", recovery_reason)
             try:
                 trigger()
             except WatchdogError as exc:

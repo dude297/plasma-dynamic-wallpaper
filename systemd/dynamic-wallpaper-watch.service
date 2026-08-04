@@ -1,5 +1,5 @@
 [Unit]
-Description=Recover dynamic wallpaper after Plasma Shell restarts
+Description=Recover dynamic wallpaper after Plasma restarts and resume
 After=graphical-session.target
 PartOf=graphical-session.target
 

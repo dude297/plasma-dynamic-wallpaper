@@ -128,7 +128,7 @@ def build_parser() -> argparse.ArgumentParser:
     actions.add_argument(
         "--watch",
         action="store_true",
-        help="watch for Plasma Shell restarts and request recovery",
+        help="watch for Plasma restarts and suspend/resume recovery",
     )
     actions.add_argument(
         "--setup",

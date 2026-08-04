@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+- The Plasma session watchdog now detects suspend/resume gaps using Linux boot time and immediately reapplies the current scheduled frame after wake.
+- Resume recovery is coalesced with Plasma owner changes so one wake event triggers at most one service start.
+
 ### Packaging
 
 - Prepare version 0.2.0 for `pipx` and PyPI installation.

@@ -193,8 +193,9 @@ systemctl --user start dynamic-wallpaper.service
 journalctl --user -u dynamic-wallpaper.service -n 20
 ```
 
-A lightweight user service also watches the Plasma Shell D-Bus owner. When
-Plasma crashes or restarts, the watchdog asks systemd to run the synchronized
+A lightweight user service watches the Plasma Shell D-Bus owner and a
+suspend-aware session clock. When Plasma crashes or restarts, or when the
+machine resumes after sleep, the watchdog asks systemd to run the synchronized
 one-shot immediately instead of waiting for the next timer interval.
 
 The same synchronization path can be tested manually:
@@ -381,7 +382,7 @@ current user.
 
 The embedded schedule selects discrete frames. Cached timer runs are lightweight,
 and the shorter interval also acts as bounded automatic recovery after Plasma
-Shell restarts, monitor changes, or resume. State reconciliation prevents
+Shell restarts, monitor changes, suspend, or resume. State reconciliation prevents
 unnecessary reapplication when the desktop is already correct.
 
 ## Releases

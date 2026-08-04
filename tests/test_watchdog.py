@@ -101,3 +101,62 @@ def test_plasma_name_owner_requires_qdbus6() -> None:
         pytest.raises(WatchdogError, match="qdbus6 was not found"),
     ):
         plasma_name_owner()
+
+
+def test_watch_plasma_triggers_after_suspend_resume_gap() -> None:
+    owners = iter([":1.1", ":1.1", ":1.1"])
+    ticks = iter([100.0, 102.0, 125.0])
+    trigger = Mock()
+
+    watch_plasma(
+        trigger,
+        interval=2.0,
+        owner_query=lambda: next(owners),
+        sleep_fn=Mock(),
+        clock_fn=lambda: next(ticks),
+        resume_gap=10.0,
+        max_checks=2,
+    )
+
+    trigger.assert_called_once_with()
+
+
+def test_watch_plasma_does_not_trigger_for_normal_polling_gap() -> None:
+    owners = iter([":1.1", ":1.1", ":1.1"])
+    ticks = iter([100.0, 102.0, 104.0])
+    trigger = Mock()
+
+    watch_plasma(
+        trigger,
+        interval=2.0,
+        owner_query=lambda: next(owners),
+        sleep_fn=Mock(),
+        clock_fn=lambda: next(ticks),
+        resume_gap=10.0,
+        max_checks=2,
+    )
+
+    trigger.assert_not_called()
+
+
+def test_watch_plasma_coalesces_resume_and_owner_change() -> None:
+    owners = iter([":1.1", ":1.2"])
+    ticks = iter([100.0, 120.0])
+    trigger = Mock()
+
+    watch_plasma(
+        trigger,
+        interval=2.0,
+        owner_query=lambda: next(owners),
+        sleep_fn=Mock(),
+        clock_fn=lambda: next(ticks),
+        resume_gap=10.0,
+        max_checks=1,
+    )
+
+    trigger.assert_called_once_with()
+
+
+def test_watch_plasma_rejects_invalid_resume_gap() -> None:
+    with pytest.raises(ValueError, match="resume_gap must be positive"):
+        watch_plasma(resume_gap=0)
