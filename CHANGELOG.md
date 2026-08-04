@@ -14,6 +14,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- A lightweight Plasma D-Bus session watchdog requests immediate wallpaper recovery whenever Plasma Shell disappears and returns with a new owner.
 - Managed multi-wallpaper commands: `list`, `install`, `use`, and `remove`.
 - Isolated cache directories for each managed wallpaper.
 - Atomic configuration switching that preserves screen-selection settings.
@@ -35,6 +36,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Fixed
 
+- Failed systemd one-shot runs retry after five seconds, and the user timer now reconciles Plasma state every minute for bounded crash and resume recovery.
 - User systemd runs now wait for active Plasma desktop containments before
   selecting and force-applying the current frame, preventing login-time races
   and recalibrating after Plasma Shell restarts.

@@ -6,4 +6,6 @@ PartOf=graphical-session.target
 [Service]
 Type=oneshot
 TimeoutStartSec=75s
+Restart=on-failure
+RestartSec=5s
 ExecStart=@DYNAMIC_WALLPAPER_COMMAND@ --startup

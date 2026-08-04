@@ -1,0 +1,13 @@
+[Unit]
+Description=Recover dynamic wallpaper after Plasma Shell restarts
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/dynamic-wallpaper --watch
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=graphical-session.target

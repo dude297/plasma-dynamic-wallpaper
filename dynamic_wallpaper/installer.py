@@ -37,6 +37,7 @@ def install_user(*, enable_timer: bool = True) -> tuple[str, ...]:
     config_path = config_dir / "config"
     service_path = systemd_dir / "dynamic-wallpaper.service"
     timer_path = systemd_dir / "dynamic-wallpaper.timer"
+    watch_path = systemd_dir / "dynamic-wallpaper-watch.service"
 
     config_dir.mkdir(parents=True, exist_ok=True)
     systemd_dir.mkdir(parents=True, exist_ok=True)
@@ -55,6 +56,13 @@ def install_user(*, enable_timer: bool = True) -> tuple[str, ...]:
     )
     service = service.replace("@DYNAMIC_WALLPAPER_COMMAND@", _command_path())
     service_path.write_text(service, encoding="utf-8")
+    watch_service = package_data.joinpath(
+        "dynamic-wallpaper-watch.service"
+    ).read_text(encoding="utf-8")
+    watch_service = watch_service.replace(
+        "@DYNAMIC_WALLPAPER_COMMAND@", _command_path()
+    )
+    watch_path.write_text(watch_service, encoding="utf-8")
     timer_path.write_text(
         package_data.joinpath("dynamic-wallpaper.timer").read_text(
             encoding="utf-8"
@@ -66,6 +74,7 @@ def install_user(*, enable_timer: bool = True) -> tuple[str, ...]:
         f"Configuration: {config_path}",
         f"Service: {service_path}",
         f"Timer: {timer_path}",
+        f"Watchdog: {watch_path}",
     ]
 
     if enable_timer:
@@ -83,6 +92,7 @@ def install_user(*, enable_timer: bool = True) -> tuple[str, ...]:
                     "enable",
                     "--now",
                     "dynamic-wallpaper.timer",
+                    "dynamic-wallpaper-watch.service",
                 ],
                 check=True,
                 capture_output=True,
@@ -94,8 +104,10 @@ def install_user(*, enable_timer: bool = True) -> tuple[str, ...]:
                 "graphical session or use --setup-no-enable"
             ) from exc
         lines.append("Timer enabled: yes")
+        lines.append("Watchdog enabled: yes")
     else:
         lines.append("Timer enabled: no")
+        lines.append("Watchdog enabled: no")
 
     wallpaper_dir = _data_home() / "dynamic-wallpaper" / "wallpapers"
     lines.append(f"Wallpaper library: {wallpaper_dir}")

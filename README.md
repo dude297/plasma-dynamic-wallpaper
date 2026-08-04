@@ -179,17 +179,23 @@ currently active wallpaper cannot be removed until another one is selected.
 
 ## Systemd
 
-The installer enables a user timer that updates the wallpaper every five minutes.
+The installer enables a user timer that checks the wallpaper every minute.
 The service uses `--startup`, which waits for Plasma to expose an active desktop
 before selecting the current time and force-applying the matching frame. This
-avoids fixed-delay races during login and recalibrates automatically after a
-Plasma Shell restart.
+avoids fixed-delay races during login. Failed one-shot runs are retried after
+five seconds, and the one-minute timer reconciles Plasma configuration with the
+current schedule after a shell crash, restart, monitor change, or resume.
 
 ```bash
 systemctl --user status dynamic-wallpaper.timer
+systemctl --user status dynamic-wallpaper-watch.service
 systemctl --user start dynamic-wallpaper.service
 journalctl --user -u dynamic-wallpaper.service -n 20
 ```
+
+A lightweight user service also watches the Plasma Shell D-Bus owner. When
+Plasma crashes or restarts, the watchdog asks systemd to run the synchronized
+one-shot immediately instead of waiting for the next timer interval.
 
 The same synchronization path can be tested manually:
 
@@ -371,11 +377,12 @@ No. Frames and state are written only to the configured cache location.
 No. Installation, the systemd timer, cache, and Plasma update all run as the
 current user.
 
-### Why does the timer run every five minutes?
+### Why does the timer run every minute?
 
-The embedded schedule selects discrete frames. Frequent lightweight checks keep
-the desktop near the intended transition time, while state tracking prevents
-unnecessary reapplication.
+The embedded schedule selects discrete frames. Cached timer runs are lightweight,
+and the shorter interval also acts as bounded automatic recovery after Plasma
+Shell restarts, monitor changes, or resume. State reconciliation prevents
+unnecessary reapplication when the desktop is already correct.
 
 ## Releases
 

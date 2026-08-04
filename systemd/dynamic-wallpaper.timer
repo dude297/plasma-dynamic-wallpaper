@@ -2,9 +2,9 @@
 Description=Update dynamic wallpaper periodically
 
 [Timer]
-OnStartupSec=30s
-OnUnitActiveSec=5min
-AccuracySec=30s
+OnStartupSec=15s
+OnUnitInactiveSec=1min
+AccuracySec=10s
 Persistent=true
 Unit=dynamic-wallpaper.service
 

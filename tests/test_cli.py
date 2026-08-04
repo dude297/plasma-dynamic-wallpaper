@@ -344,6 +344,19 @@ def test_main_applies_selected_time_and_flags(
     }
 
 
+def test_main_runs_plasma_watchdog(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    watch = Mock()
+    monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper", "--watch"])
+    monkeypatch.setattr(cli, "watch_plasma", watch)
+
+    result = cli.main()
+
+    assert result == 0
+    watch.assert_called_once_with()
+
+
 def test_main_startup_waits_for_plasma_and_forces_current_frame(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

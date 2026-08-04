@@ -31,6 +31,7 @@ from .metadata import MetadataError
 from .plasma import PlasmaError, wait_for_plasma
 from .scheduler import ScheduleError
 from .state import StateError
+from .watchdog import WatchdogError, watch_plasma
 
 
 logger = get_logger("cli")
@@ -123,6 +124,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--startup",
         action="store_true",
         help="wait for Plasma readiness and apply the current frame",
+    )
+    actions.add_argument(
+        "--watch",
+        action="store_true",
+        help="watch for Plasma Shell restarts and request recovery",
     )
     actions.add_argument(
         "--setup",
@@ -226,6 +232,10 @@ def main() -> int:
         return 0 if healthy else 1
 
     try:
+        if args.watch:
+            watch_plasma()
+            return 0
+
         if args.setup or args.setup_no_enable:
             for line in install_user(enable_timer=args.setup):
                 print(line)
@@ -405,6 +415,7 @@ def main() -> int:
         ScheduleError,
         StateError,
         ValueError,
+        WatchdogError,
     ) as exc:
         logger.error("Command failed: %s", exc)
         print(f"dynamic-wallpaper: {exc}", file=sys.stderr)
