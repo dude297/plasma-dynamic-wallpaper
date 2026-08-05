@@ -77,3 +77,17 @@ source readability, and cache writability.
 Frame extraction and metadata decoding happen before the Plasma write. State is
 saved only after Plasma confirms the requested URI. This keeps a failed desktop
 update from being recorded as successful.
+
+
+## Schedule modes
+
+`solar.py` calculates civil dawn, solar noon, and civil dusk for the configured
+coordinates. `scheduler.py` then maps the embedded frame timeline onto those
+local anchors while preserving the HEIC frame order. Embedded mode bypasses the
+solar transformation.
+
+## Runtime recovery
+
+The user timer performs regular reconciliation. The watchdog observes Plasma's
+D-Bus owner and a suspend-aware clock, then asks systemd to run the synchronized
+one-shot after Plasma restarts or the machine resumes.
