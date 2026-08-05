@@ -47,7 +47,7 @@ Before tagging a release:
 1. Update `version` in `pyproject.toml`.
 2. Move the completed entries from `[Unreleased]` into a matching, dated
    `CHANGELOG.md` section.
-3. Run every command under **Quality checks**.
+3. Run `python scripts/release.py all --native --require-clean`.
 4. Commit and push the release preparation changes.
 5. Create and push the exact matching tag, such as `v0.1.0`, or a release-candidate tag such as `v0.1.0-rc6`.
 
@@ -58,7 +58,8 @@ git push origin v0.1.0
 
 The release workflow verifies the tag, package version, changelog, lint, tests,
 coverage, package metadata, and installed command before creating the GitHub
-Release. PyPI publishing is intentionally not enabled.
+Release. Stable tags publish to PyPI through trusted publishing; RC tags remain
+GitHub prereleases.
 
 ## Community and security
 

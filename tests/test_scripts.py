@@ -39,3 +39,32 @@ def test_script_rejects_unknown_option(script: str) -> None:
 
     assert result.returncode == 2
     assert "Unknown option" in result.stderr
+
+
+def test_release_helper_reports_version() -> None:
+    result = subprocess.run(
+        ["python", str(ROOT / "scripts" / "release.py"), "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Validate and build" in result.stdout
+    assert "--native" in result.stdout
+
+
+def test_debian_builder_rejects_unknown_option() -> None:
+    result = subprocess.run(
+        [
+            "bash",
+            str(ROOT / "packaging" / "debian" / "build-deb.sh"),
+            "--unknown",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "Usage:" in result.stderr

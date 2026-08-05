@@ -18,6 +18,7 @@ class Config:
     latitude: float | None = None
     longitude: float | None = None
 
+
 def _parse_assignment(line: str) -> tuple[str, str] | None:
     line = line.strip()
 
