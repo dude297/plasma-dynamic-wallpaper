@@ -14,7 +14,9 @@ class Config:
     heic_file: Path
     cache_dir: Path
     screen_ids: tuple[int, ...] | None = None
-
+    schedule_mode: str = "embedded"
+    latitude: float | None = None
+    longitude: float | None = None
 
 def _parse_assignment(line: str) -> tuple[str, str] | None:
     line = line.strip()
@@ -67,6 +69,8 @@ def load_config(path: Path | None = None) -> Config:
         raise ValueError(f"Missing required setting: {exc.args[0]}") from exc
 
     screen_ids: tuple[int, ...] | None = None
+    schedule_mode: str = "embedded"
+
     raw_screen_ids = values.get("SCREEN_IDS", "").strip()
     if raw_screen_ids:
         try:
@@ -81,10 +85,24 @@ def load_config(path: Path | None = None) -> Config:
             ) from exc
         screen_ids = parsed_screen_ids
 
+    schedule_mode = values.get("SCHEDULE_MODE", "embedded").strip().casefold()
+
+    def optional_float(key: str) -> float | None:
+        raw = values.get(key, "").strip()
+        if not raw:
+            return None
+        try:
+            return float(raw)
+        except ValueError as exc:
+            raise ValueError(f"{key} must be numeric") from exc
+
     return Config(
         heic_file=heic_file,
         cache_dir=cache_dir,
         screen_ids=screen_ids,
+        schedule_mode=schedule_mode,
+        latitude=optional_float("LATITUDE"),
+        longitude=optional_float("LONGITUDE"),
     )
 
 
@@ -133,6 +151,19 @@ def validate_config(config: Config) -> None:
             raise ValueError("SCREEN_IDS cannot contain negative values")
         if len(set(config.screen_ids)) != len(config.screen_ids):
             raise ValueError("SCREEN_IDS cannot contain duplicates")
+
+    if config.schedule_mode not in {"embedded", "solar"}:
+        raise ValueError("SCHEDULE_MODE must be either embedded or solar")
+
+    if config.schedule_mode == "solar":
+        if config.latitude is None or config.longitude is None:
+            raise ValueError(
+                "LATITUDE and LONGITUDE are required for solar scheduling"
+            )
+        if not -90 <= config.latitude <= 90:
+            raise ValueError("LATITUDE must be between -90 and 90")
+        if not -180 <= config.longitude <= 180:
+            raise ValueError("LONGITUDE must be between -180 and 180")
 
     if config.cache_dir.exists() and not config.cache_dir.is_dir():
         raise ValueError(

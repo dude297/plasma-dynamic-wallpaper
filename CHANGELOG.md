@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Optional solar-aware scheduling that aligns the embedded wallpaper timeline
+  with local civil dawn, solar noon, and civil dusk using configured latitude
+  and longitude.
+- Solar schedule details in `--config`, `--schedule`, and `--current` output.
+
 - Keep watchdog lifecycle and recovery-reason logs visible in the user journal.
 
 - The Plasma session watchdog now detects suspend/resume gaps using Linux boot time and immediately reapplies the current scheduled frame after wake.

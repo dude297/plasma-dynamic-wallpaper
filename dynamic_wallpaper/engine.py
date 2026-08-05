@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-from time import perf_counter
 from datetime import datetime
+from time import perf_counter
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +18,8 @@ from .config import Config
 from .logging import get_logger
 from .metadata import load_h24_metadata
 from .plasma import plasma_desktops, set_wallpaper, wallpaper_is_configured
-from .scheduler import format_schedule, select_frame
+from .scheduler import ScheduleError, format_schedule, select_frame
+from .solar import calculate_solar_events, timezone_offset_for
 from .state import is_current, load_state, save_state
 
 
@@ -114,18 +115,30 @@ class WallpaperEngine:
         )
         return lines
 
+    def _schedule_location(self) -> tuple[float | None, float | None]:
+        if self.config.schedule_mode == "solar":
+            return self.config.latitude, self.config.longitude
+        return None, None
+
     def current(self, selected_time: datetime) -> list[str]:
         """Report the scheduled frame and active Plasma desktop state."""
+        latitude, longitude = self._schedule_location()
         index, wallpaper, entry = select_frame(
             self.frames,
             self.metadata,
             selected_time,
+            latitude=latitude,
+            longitude=longitude,
         )
         lines = [
             f"Time: {selected_time:%Y-%m-%d %H:%M}",
+            f"Schedule mode: {self.config.schedule_mode}",
             f"Scheduled frame: {index}/{len(self.frames) - 1}",
             f"Scheduled image: {wallpaper}",
-            f"Schedule entry: {entry.minutes // 60:02d}:{entry.minutes % 60:02d}",
+            (
+                "Schedule entry: "
+                f"{entry.minutes // 60:02d}:{entry.minutes % 60:02d}"
+            ),
         ]
         records = plasma_desktops(self.config.screen_ids)
         if not records:
@@ -189,7 +202,41 @@ class WallpaperEngine:
 
     def schedule(self) -> list[str]:
         """Return the formatted embedded schedule and appearance metadata."""
-        lines = format_schedule(self.metadata)
+        now = datetime.now()
+        latitude, longitude = self._schedule_location()
+        lines = [f"Schedule mode: {self.config.schedule_mode}"]
+        if latitude is not None and longitude is not None:
+            try:
+                events = calculate_solar_events(
+                    now.date(),
+                    latitude,
+                    longitude,
+                    timezone_offset_minutes=timezone_offset_for(now),
+                )
+            except RuntimeError as exc:
+                raise ScheduleError(str(exc)) from exc
+            lines.extend(
+                [
+                    f"Solar location: {latitude:.4f}, {longitude:.4f}",
+                    (
+                        "Civil dawn / noon / dusk: "
+                        f"{events.civil_dawn // 60:02d}:"
+                        f"{events.civil_dawn % 60:02d} / "
+                        f"{events.solar_noon // 60:02d}:"
+                        f"{events.solar_noon % 60:02d} / "
+                        f"{events.civil_dusk // 60:02d}:"
+                        f"{events.civil_dusk % 60:02d}"
+                    ),
+                ]
+            )
+        lines.extend(
+            format_schedule(
+                self.metadata,
+                now,
+                latitude=latitude,
+                longitude=longitude,
+            )
+        )
         appearance = self.metadata.get("ap")
 
         if isinstance(appearance, dict):
@@ -222,10 +269,13 @@ class WallpaperEngine:
         """Select and optionally apply the correct wallpaper frame."""
         operation_started = perf_counter()
         selection_started = perf_counter()
+        latitude, longitude = self._schedule_location()
         index, wallpaper, entry = select_frame(
             self.frames,
             self.metadata,
             selected_time,
+            latitude=latitude,
+            longitude=longitude,
         )
         logger.info(
             "Selected frame %d (%s) for %s in %.1f ms",

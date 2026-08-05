@@ -334,6 +334,34 @@ python -m pytest --cov=dynamic_wallpaper --cov-report=term-missing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for package-build and pull-request
 checks. Live desktop verification is documented in [docs/testing.md](docs/testing.md).
 
+
+## Solar-aware scheduling
+
+By default, frames follow the clock times embedded in Apple's
+`apple_desktop:h24` metadata. Solar mode keeps the original frame order but
+warps that timeline around your local civil dawn, solar noon, and civil dusk.
+This makes daylight changes follow the seasons instead of fixed source times.
+
+Add coordinates to `~/.config/dynamic-wallpaper/config`:
+
+```ini
+SCHEDULE_MODE=solar
+LATITUDE=37.3382
+LONGITUDE=-121.8863
+```
+
+Use decimal degrees; west longitudes are negative. Inspect the resolved daily
+schedule with:
+
+```bash
+dynamic-wallpaper --schedule
+dynamic-wallpaper --current
+```
+
+Set `SCHEDULE_MODE=embedded` to restore the original Apple clock schedule. At
+polar latitudes where civil dawn or dusk does not occur, solar mode reports an
+actionable error rather than silently selecting an incorrect frame.
+
 ## Troubleshooting
 
 See the [troubleshooting guide](docs/troubleshooting.md) for logging, cache,

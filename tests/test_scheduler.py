@@ -162,3 +162,68 @@ def test_format_schedule_returns_readable_lines() -> None:
         "12:00 -> frame 1",
         "18:00 -> frame 2",
     ]
+
+
+def test_resolve_solar_schedule_preserves_frame_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from dynamic_wallpaper import scheduler
+    from dynamic_wallpaper.solar import SolarEvents
+
+    metadata = {
+        "ti": [
+            {"t": 0.0, "i": 0},
+            {"t": 240 / 1440, "i": 1},
+            {"t": 0.5, "i": 2},
+            {"t": 1200 / 1440, "i": 3},
+        ]
+    }
+    monkeypatch.setattr(
+        scheduler,
+        "calculate_solar_events",
+        lambda *args, **kwargs: SolarEvents(360, 780, 1200),
+    )
+    monkeypatch.setattr(scheduler, "timezone_offset_for", lambda now: -420)
+
+    entries = scheduler.resolve_time_schedule(
+        metadata,
+        datetime(2026, 8, 4, 12, 0),
+        latitude=37.3382,
+        longitude=-121.8863,
+    )
+
+    assert [entry.frame_index for entry in entries] == [0, 1, 2, 3]
+    assert [entry.minutes for entry in entries] == [0, 360, 780, 1200]
+
+
+def test_select_frame_uses_solar_aligned_transition(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from dynamic_wallpaper import scheduler
+    from dynamic_wallpaper.solar import SolarEvents
+
+    metadata = {
+        "ti": [
+            {"t": 0.0, "i": 0},
+            {"t": 240 / 1440, "i": 1},
+            {"t": 0.5, "i": 2},
+        ]
+    }
+    frames = make_frames(3)
+    monkeypatch.setattr(
+        scheduler,
+        "calculate_solar_events",
+        lambda *args, **kwargs: SolarEvents(360, 780, 1200),
+    )
+    monkeypatch.setattr(scheduler, "timezone_offset_for", lambda now: -420)
+
+    index, _, entry = select_frame(
+        frames,
+        metadata,
+        datetime(2026, 8, 4, 6, 0),
+        latitude=37.3382,
+        longitude=-121.8863,
+    )
+
+    assert index == 1
+    assert entry.minutes == 360

@@ -141,6 +141,7 @@ def test_schedule_adds_appearance_alternatives(tmp_path: Path) -> None:
     }
 
     assert engine.schedule() == [
+        "Schedule mode: embedded",
         "00:00 -> frame 0",
         "",
         "Appearance alternatives: light=2, dark=6",
@@ -154,7 +155,10 @@ def test_schedule_omits_invalid_appearance_metadata(tmp_path: Path) -> None:
         "ap": "invalid",
     }
 
-    assert engine.schedule() == ["00:00 -> frame 0"]
+    assert engine.schedule() == [
+        "Schedule mode: embedded",
+        "00:00 -> frame 0",
+    ]
 
 
 def test_extract_reports_prepared_frame_count(tmp_path: Path) -> None:

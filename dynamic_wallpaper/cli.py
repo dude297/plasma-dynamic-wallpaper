@@ -346,6 +346,11 @@ def main() -> int:
                 else ", ".join(str(value) for value in config.screen_ids)
             )
             print(f"Target screens: {screens}")
+            print(f"Schedule mode: {config.schedule_mode}")
+
+            if config.schedule_mode == "solar":
+                print(f"Latitude: {config.latitude}")
+                print(f"Longitude: {config.longitude}")
             return 0
 
         engine = WallpaperEngine(config)

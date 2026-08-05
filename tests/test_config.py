@@ -218,3 +218,56 @@ def test_update_config_values_preserves_unrelated_lines(
         "# comment\nHEIC_FILE=/new.heic\nSCREEN_IDS=0,1\n\n"
         "CACHE_DIR=/new-cache\n"
     )
+
+
+def test_load_config_reads_solar_schedule_settings(tmp_path: Path) -> None:
+    config_file = tmp_path / "config"
+    config_file.write_text(
+        "HEIC_FILE=/wallpaper.heic\n"
+        "CACHE_DIR=/cache\n"
+        "SCHEDULE_MODE=solar\n"
+        "LATITUDE=37.3382\n"
+        "LONGITUDE=-121.8863\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(config_file)
+
+    assert config.schedule_mode == "solar"
+    assert config.latitude == 37.3382
+    assert config.longitude == -121.8863
+
+
+def test_validate_config_requires_coordinates_for_solar_mode(
+    tmp_path: Path,
+) -> None:
+    config = Config(
+        tmp_path / "wallpaper.heic",
+        tmp_path / "cache",
+        schedule_mode="solar",
+    )
+
+    with pytest.raises(ValueError, match="LATITUDE and LONGITUDE"):
+        validate_config(config)
+
+
+@pytest.mark.parametrize(
+    ("latitude", "longitude", "message"),
+    [(91.0, 0.0, "LATITUDE"), (0.0, 181.0, "LONGITUDE")],
+)
+def test_validate_config_rejects_invalid_solar_coordinates(
+    tmp_path: Path,
+    latitude: float,
+    longitude: float,
+    message: str,
+) -> None:
+    config = Config(
+        tmp_path / "wallpaper.heic",
+        tmp_path / "cache",
+        schedule_mode="solar",
+        latitude=latitude,
+        longitude=longitude,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        validate_config(config)

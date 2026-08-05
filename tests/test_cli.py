@@ -118,6 +118,7 @@ def test_main_prints_active_configuration(
         "Source HEIC: /wallpapers/Fuji.heic\n"
         "Cache directory: /cache/Fuji\n"
         "Target screens: all\n"
+        "Schedule mode: embedded\n"
     )
     engine_type.assert_not_called()
 

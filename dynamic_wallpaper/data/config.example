@@ -13,3 +13,10 @@ CHECK_INTERVAL_MINUTES=15
 # Set SCREEN_IDS only to restrict updates to specific active Plasma screens.
 # Temporarily disconnected screens are skipped and retried automatically.
 # SCREEN_IDS=0,1
+
+# Schedule mode: embedded (Apple's original clock times) or solar.
+# Solar mode warps the embedded timeline around local civil dawn, solar noon,
+# and civil dusk while preserving the wallpaper's original frame order.
+SCHEDULE_MODE=embedded
+# LATITUDE=37.3382
+# LONGITUDE=-121.8863
