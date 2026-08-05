@@ -12,6 +12,43 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - The Plasma session watchdog now detects suspend/resume gaps using Linux boot time and immediately reapplies the current scheduled frame after wake.
 - Resume recovery is coalesced with Plasma owner changes so one wake event triggers at most one service start.
 
+## [0.2.0] - 2026-08-04
+
+### Added
+- Wallpaper library management commands:
+  - `--library-list`
+  - `--library-search`
+  - `--library-install`
+  - `--library-remove`
+  - `--library-installed`
+- `--setup` and `--setup-no-enable` installer workflow.
+- `--startup` mode for login-time wallpaper synchronization.
+- `--current` command for inspecting the active Plasma wallpaper state.
+- Dynamic wallpaper watchdog service for Plasma restart and resume recovery.
+- Debian package build support.
+- Arch Linux PKGBUILD generation.
+- Support for `python -m dynamic_wallpaper`.
+
+### Changed
+- Reworked Plasma wallpaper verification for modern Plasma 6 behavior.
+- Improved startup behavior so the correct frame is applied immediately after login.
+- Installer now deploys and configures all required user systemd units.
+- Reorganized wallpaper library and cache layout.
+- Improved logging, diagnostics, and runtime status reporting.
+
+### Fixed
+- Fixed multi-monitor verification failures caused by concatenated Plasma DBus responses.
+- Fixed systemd timer failures when verification encountered detached displays.
+- Improved handling of temporarily unavailable monitors.
+- Reduced unnecessary wallpaper rewrites when the correct frame is already active.
+- Improved atomic wallpaper alias generation for Plasma.
+
+### Internal
+- Expanded automated test suite to 197 passing tests.
+- Added packaging validation with `python -m build` and `twine check`.
+- Added Ruff formatting and linting to release validation.
+- Numerous internal refactors, cleanup, and documentation improvements.
+
 ### Packaging
 
 - Prepare version 0.2.0 for `pipx` and PyPI installation.
