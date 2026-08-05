@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .atomic import atomic_write_text
+
 
 class StateError(RuntimeError):
     """Raised when wallpaper state cannot be saved."""
@@ -52,13 +54,7 @@ def save_state(
         "applied_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    temporary_path = path.with_suffix(".tmp")
-
     try:
-        temporary_path.write_text(
-            json.dumps(state, indent=2) + "\n",
-            encoding="utf-8",
-        )
-        temporary_path.replace(path)
+        atomic_write_text(path, json.dumps(state, indent=2) + "\n")
     except OSError as exc:
         raise StateError(f"Could not save wallpaper state: {exc}") from exc

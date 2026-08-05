@@ -112,3 +112,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Stable `vX.Y.Z` tags publish normal GitHub releases, while matching
   `vX.Y.Z-rcN` tags are marked as pre-releases and do not replace the latest
   stable release.
+
+### Release polish
+
+- Make state and configuration replacement durable with file and directory fsync.
+- Expand release validation and packaging documentation.

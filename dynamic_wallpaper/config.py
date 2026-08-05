@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from .atomic import atomic_write_text
+
 
 @dataclass(frozen=True)
 class Config:
@@ -113,9 +115,7 @@ def update_config_values(
     output.extend(f"{key}={value}" for key, value in pending.items())
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.tmp")
-    temporary.write_text("\n".join(output) + "\n", encoding="utf-8")
-    temporary.replace(path)
+    atomic_write_text(path, "\n".join(output) + "\n", mode=0o600)
     return path
 
 

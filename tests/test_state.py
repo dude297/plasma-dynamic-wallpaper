@@ -89,7 +89,22 @@ def test_save_state_wraps_os_errors(
     def fail_write(*args: object, **kwargs: object) -> None:
         raise OSError("disk full")
 
-    monkeypatch.setattr(Path, "write_text", fail_write)
+    monkeypatch.setattr(
+        "dynamic_wallpaper.state.atomic_write_text", fail_write
+    )
 
     with pytest.raises(StateError, match="disk full"):
         save_state(state_file, wallpaper, 1)
+
+
+def test_save_state_fsyncs_file_and_parent_directory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    wallpaper = tmp_path / "frame.png"
+    wallpaper.touch()
+    calls: list[int] = []
+    monkeypatch.setattr("dynamic_wallpaper.atomic.os.fsync", calls.append)
+
+    save_state(tmp_path / "state.json", wallpaper, 0)
+
+    assert len(calls) == 2
