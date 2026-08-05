@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+- Keep watchdog lifecycle and recovery-reason logs visible in the user journal.
+
 - The Plasma session watchdog now detects suspend/resume gaps using Linux boot time and immediately reapplies the current scheduled frame after wake.
 - Resume recovery is coalesced with Plasma owner changes so one wake event triggers at most one service start.
 

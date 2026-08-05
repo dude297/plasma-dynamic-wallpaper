@@ -160,3 +160,28 @@ def test_watch_plasma_coalesces_resume_and_owner_change() -> None:
 def test_watch_plasma_rejects_invalid_resume_gap() -> None:
     with pytest.raises(ValueError, match="resume_gap must be positive"):
         watch_plasma(resume_gap=0)
+
+
+def test_watch_plasma_logs_successful_recovery_reason() -> None:
+    owners = iter([":1.1", ":1.2"])
+
+    with patch("dynamic_wallpaper.watchdog.logger.info") as info:
+        watch_plasma(
+            Mock(),
+            interval=0.01,
+            owner_query=lambda: next(owners),
+            sleep_fn=Mock(),
+            max_checks=1,
+        )
+
+    calls = [call.args for call in info.call_args_list]
+    assert any(
+        args[0] == "%s; reapplying wallpaper"
+        and "D-Bus owner changed" in args[1]
+        for args in calls
+    )
+    assert any(
+        args[0] == "Wallpaper recovery requested successfully: %s"
+        and "D-Bus owner changed" in args[1]
+        for args in calls
+    )

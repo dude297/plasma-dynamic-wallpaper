@@ -105,7 +105,9 @@ def watch_plasma(
     previous_owner = owner_query()
     previous_tick = clock_fn()
     logger.info(
-        "Plasma session watchdog started; current owner: %s",
+        "Watchdog started: interval=%.1fs resume_gap=%.1fs owner=%s",
+        interval,
+        resume_gap,
         previous_owner or "unavailable",
     )
     checks = 0
@@ -146,6 +148,15 @@ def watch_plasma(
             try:
                 trigger()
             except WatchdogError as exc:
-                logger.error("Could not request wallpaper recovery: %s", exc)
+                logger.error(
+                    "Wallpaper recovery request failed (%s): %s",
+                    recovery_reason,
+                    exc,
+                )
+            else:
+                logger.info(
+                    "Wallpaper recovery requested successfully: %s",
+                    recovery_reason,
+                )
 
         previous_owner = current_owner

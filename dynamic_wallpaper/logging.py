@@ -16,13 +16,17 @@ class _MillisecondsFormatter(logging.Formatter):
 
 
 def configure_logging(
-    *, verbose: bool = False, log_file: Path | None = None
+    *,
+    verbose: bool = False,
+    log_file: Path | None = None,
+    console_info: bool = False,
 ) -> None:
     """Configure package logging for one CLI invocation.
 
     Normal scheduled runs remain quiet unless an error occurs. ``--verbose``
-    enables debug output on stderr, while ``--log-file`` records informational
-    diagnostics and timing data in a persistent file.
+    enables debug output on stderr, while ``console_info`` keeps long-running
+    service lifecycle messages visible to journald. ``--log-file`` records
+    informational diagnostics and timing data in a persistent file.
     """
     logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(logging.DEBUG)
@@ -38,7 +42,13 @@ def configure_logging(
     )
 
     console = logging.StreamHandler(sys.stderr)
-    console.setLevel(logging.DEBUG if verbose else logging.CRITICAL + 1)
+    if verbose:
+        console_level = logging.DEBUG
+    elif console_info:
+        console_level = logging.INFO
+    else:
+        console_level = logging.CRITICAL + 1
+    console.setLevel(console_level)
     console.setFormatter(formatter)
     logger.addHandler(console)
 

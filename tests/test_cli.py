@@ -348,13 +348,20 @@ def test_main_runs_plasma_watchdog(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     watch = Mock()
+    configure = Mock()
     monkeypatch.setattr(sys, "argv", ["dynamic-wallpaper", "--watch"])
     monkeypatch.setattr(cli, "watch_plasma", watch)
+    monkeypatch.setattr(cli, "configure_logging", configure)
 
     result = cli.main()
 
     assert result == 0
     watch.assert_called_once_with()
+    configure.assert_called_once_with(
+        verbose=False,
+        log_file=None,
+        console_info=True,
+    )
 
 
 def test_main_startup_waits_for_plasma_and_forces_current_frame(
@@ -475,6 +482,7 @@ def test_main_configures_verbose_file_logging(
     configure.assert_called_once_with(
         verbose=True,
         log_file=Path("/tmp/dynamic.log"),
+        console_info=False,
     )
 
 

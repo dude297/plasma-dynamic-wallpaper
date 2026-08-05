@@ -215,7 +215,11 @@ def main() -> int:
     args = build_parser().parse_args()
 
     try:
-        configure_logging(verbose=args.verbose, log_file=args.log_file)
+        configure_logging(
+            verbose=args.verbose,
+            log_file=args.log_file,
+            console_info=args.watch,
+        )
     except OSError as exc:
         print(
             f"dynamic-wallpaper: could not open log file: {exc}",

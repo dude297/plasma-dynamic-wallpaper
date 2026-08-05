@@ -24,6 +24,18 @@ def test_default_logging_keeps_logs_off_stderr(capsys) -> None:
     assert "visible warning" not in captured.err
 
 
+def test_console_info_writes_lifecycle_logs_to_stderr(capsys) -> None:
+    configure_logging(console_info=True)
+
+    logger = get_logger("watchdog")
+    logger.info("watchdog started")
+    logger.debug("poll details")
+
+    captured = capsys.readouterr()
+    assert "INFO dynamic_wallpaper.watchdog: watchdog started" in captured.err
+    assert "poll details" not in captured.err
+
+
 def test_verbose_logging_writes_debug_to_stderr(capsys) -> None:
     configure_logging(verbose=True)
 
