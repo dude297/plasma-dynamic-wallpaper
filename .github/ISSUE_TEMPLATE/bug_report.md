@@ -20,16 +20,37 @@ Describe what happened and what you expected instead.
 
 - Distribution and version:
 - KDE Plasma version:
+- Session type (Wayland/X11):
 - Python version:
 - Project version (`dynamic-wallpaper --version`):
-- Installation method:
+- Installation method (`pipx`, source, Debian, Arch, other):
+- Number of active displays:
 
 ## Diagnostics
 
-Include relevant command output or user-service logs:
+Run and include the relevant output:
 
-```text
-journalctl --user -u dynamic-wallpaper.service -n 50
+```bash
+dynamic-wallpaper --doctor
+dynamic-wallpaper --current
+systemctl --user status dynamic-wallpaper.timer --no-pager -l
+systemctl --user status dynamic-wallpaper-watch.service --no-pager -l
+journalctl --user -u dynamic-wallpaper.service -n 50 --no-pager
 ```
 
-Do not include private paths or other sensitive information.
+For timing, cache, or Plasma verification problems, also include:
+
+```bash
+dynamic-wallpaper --force --verbose
+```
+
+## Privacy checklist
+
+- [ ] I removed access tokens and unrelated personal information.
+- [ ] I redacted private home paths, coordinates, and wallpaper names if needed.
+- [ ] This report does not contain a security vulnerability; those are reported privately.
+
+## Additional context
+
+Add screenshots or other context. Do not upload copyrighted wallpaper files
+unless you have permission to share them.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Installation and troubleshooting guide
+    url: https://github.com/dude297/plasma-dynamic-wallpaper/blob/main/docs/troubleshooting.md
+    about: Check common setup, Plasma, cache, and systemd solutions first.
+  - name: Security report
+    url: https://github.com/dude297/plasma-dynamic-wallpaper/security/advisories/new
+    about: Report vulnerabilities privately instead of opening a public issue.

@@ -59,3 +59,10 @@ git push origin v0.1.0
 The release workflow verifies the tag, package version, changelog, lint, tests,
 coverage, package metadata, and installed command before creating the GitHub
 Release. PyPI publishing is intentionally not enabled.
+
+## Community and security
+
+Participation is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Report
+security-sensitive problems privately according to [SECURITY.md](SECURITY.md).
+Use the issue templates for public bugs and feature requests, and avoid sharing
+private HEIC files or unredacted user-session data.
