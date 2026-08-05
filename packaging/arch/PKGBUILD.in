@@ -1,0 +1,22 @@
+pkgname=plasma-dynamic-wallpaper
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="Apple Dynamic Desktop HEIC support for KDE Plasma"
+arch=('any')
+url="https://github.com/dude297/plasma-dynamic-wallpaper"
+license=('MIT')
+depends=('python>=3.12' 'perl-image-exiftool' 'libheif' 'qt6-tools')
+makedepends=('python-build' 'python-installer' 'python-wheel')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('@SHA256@')
+
+build() {
+  cd "$pkgname-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

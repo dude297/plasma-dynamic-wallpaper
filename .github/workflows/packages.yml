@@ -1,0 +1,43 @@
+name: Native packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  debian:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: python -m pip install --upgrade pip build
+      - run: packaging/debian/build-deb.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: debian-package
+          path: dist/*.deb
+          if-no-files-found: error
+
+  arch-metadata:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - run: python -m pip install build
+      - run: python -m build --sdist
+      - run: python scripts/render-pkgbuild.py dist/*.tar.gz
+      - uses: actions/upload-artifact@v7
+        with:
+          name: arch-pkgbuild
+          path: dist/PKGBUILD
+          if-no-files-found: error

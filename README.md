@@ -422,3 +422,10 @@ and read-back response in the log file:
 dynamic-wallpaper --force --verbose \
   --log-file ~/.local/state/dynamic-wallpaper/run.log
 ```
+
+### Native package artifacts
+
+Maintainers can build a Debian package and render an Arch Linux PKGBUILD from
+the tagged source. See [`docs/packaging.md`](docs/packaging.md). End users should
+prefer the published PyPI package through `pipx` unless their distribution
+provides an official native package.

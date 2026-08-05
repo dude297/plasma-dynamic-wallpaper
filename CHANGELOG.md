@@ -117,3 +117,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Make state and configuration replacement durable with file and directory fsync.
 - Expand release validation and packaging documentation.
+
+### Packaging
+
+- Add reproducible Debian package and Arch PKGBUILD tooling.
+- Add a GitHub Actions workflow that publishes native-package build artifacts.
