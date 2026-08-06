@@ -1,6 +1,6 @@
 """Tests for solar-event calculations."""
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -35,6 +35,6 @@ def test_calculate_solar_events_rejects_polar_twilight_gap() -> None:
 
 
 def test_timezone_offset_for_aware_datetime() -> None:
-    value = datetime(2026, 8, 4, 12, tzinfo=timezone.utc)
+    value = datetime(2026, 8, 4, 12, tzinfo=UTC)
 
     assert timezone_offset_for(value) == 0

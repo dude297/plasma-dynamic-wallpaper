@@ -18,9 +18,7 @@ python -m pip install -e ".[dev]"
 Run the same checks used by CI before opening a pull request:
 
 ```bash
-python -m ruff check .
-python -m ruff format --check .
-python -m pytest
+make check
 python -m pytest --cov=dynamic_wallpaper --cov-report=term-missing
 python -m build
 python -m twine check dist/*
@@ -30,8 +28,9 @@ git diff --check
 The opt-in live Plasma test and self-hosted runner requirements are documented
 in [docs/testing.md](docs/testing.md).
 
-Use `python -m ruff format .` to apply formatting and
-`python -m ruff check . --fix` for safe automatic lint fixes.
+Use `make fix` to apply Ruff fixes (including explicitly opted-in
+unsafe fixes) and formatting. Review the resulting diff, then run
+`make check`; CI invokes the same shared quality gate.
 
 ## Pull requests
 

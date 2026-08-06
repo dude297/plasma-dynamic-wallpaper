@@ -12,7 +12,6 @@ import pytest
 
 from dynamic_wallpaper.plasma import set_wallpaper
 
-
 pytestmark = pytest.mark.integration
 
 _RUN_LIVE = os.environ.get("PDW_RUN_LIVE_PLASMA_TESTS") == "1"

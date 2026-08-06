@@ -12,7 +12,6 @@ from uuid import uuid4
 
 from .logging import get_logger
 
-
 logger = get_logger("plasma")
 _RENDER_ALIAS_LIMIT = 16
 _QDBUS_TIMEOUT_SECONDS = 15

@@ -10,7 +10,6 @@ import sys
 import tomllib
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 BUILD = ROOT / "build"
@@ -38,6 +37,20 @@ def clean() -> None:
         shutil.rmtree(path, ignore_errors=True)
 
 
+def fix_sources() -> None:
+    """Apply Ruff's automatic fixes and formatter locally."""
+    run(
+        sys.executable,
+        "-m",
+        "ruff",
+        "check",
+        ".",
+        "--fix",
+        "--unsafe-fixes",
+    )
+    run(sys.executable, "-m", "ruff", "format", ".")
+
+
 def quality_gate() -> None:
     """Run the checks required before building a release."""
     run(sys.executable, "-m", "ruff", "check", ".")
@@ -51,7 +64,6 @@ def build_artifacts(*, native: bool) -> None:
     """Create and validate Python and optional native package artifacts."""
     clean()
     run(sys.executable, "-m", "build")
-    run(sys.executable, "-m", "twine", "check", "dist/*")
 
     version = project_version()
     wheel = DIST / f"plasma_dynamic_wallpaper-{version}-py3-none-any.whl"
@@ -60,6 +72,14 @@ def build_artifacts(*, native: bool) -> None:
         raise SystemExit(
             "Expected versioned wheel and source archive were not created."
         )
+    run(
+        sys.executable,
+        "-m",
+        "twine",
+        "check",
+        str(wheel.relative_to(ROOT)),
+        str(source.relative_to(ROOT)),
+    )
 
     if native:
         run("bash", "packaging/debian/build-deb.sh", "--no-python-build")
@@ -89,8 +109,8 @@ def main() -> int:
     )
     parser.add_argument(
         "command",
-        choices=("check", "artifacts", "all"),
-        help="checks only, artifacts only, or both",
+        choices=("fix", "check", "artifacts", "all"),
+        help="apply fixes, run checks, build artifacts, or run all checks/builds",
     )
     parser.add_argument(
         "--native",
@@ -106,6 +126,8 @@ def main() -> int:
 
     if args.require_clean:
         validate_release_tree()
+    if args.command == "fix":
+        fix_sources()
     if args.command in {"check", "all"}:
         quality_gate()
     if args.command in {"artifacts", "all"}:

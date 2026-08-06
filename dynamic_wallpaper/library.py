@@ -14,7 +14,6 @@ from typing import Any
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-
 DEFAULT_CATALOG_URL = (
     "https://raw.githubusercontent.com/dude297/"
     "plasma-dynamic-wallpaper-library/main/catalog.json"
@@ -63,7 +62,7 @@ def _read_url(url: str, *, max_bytes: int) -> bytes:
 
     request = Request(url, headers={"User-Agent": "plasma-dynamic-wallpaper"})
     try:
-        with urlopen(request, timeout=30) as response:  # noqa: S310
+        with urlopen(request, timeout=30) as response:
             data = response.read(max_bytes + 1)
     except OSError as exc:
         raise LibraryError(f"could not download {url}: {exc}") from exc
@@ -152,8 +151,9 @@ def search_catalog(
         entry
         for entry in entries
         if needle
-        in " ".join(
-            (entry.wallpaper_id, entry.name, entry.author, entry.description)
+        in (
+            f"{entry.wallpaper_id} {entry.name} "
+            f"{entry.author} {entry.description}"
         ).casefold()
     )
 

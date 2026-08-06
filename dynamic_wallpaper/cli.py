@@ -15,12 +15,12 @@ from .engine import WallpaperEngine
 from .installer import InstallError, install_user
 from .library import (
     LibraryError,
-    active_installed_id,
     activate_wallpaper,
+    active_installed_id,
     find_entry,
     install_local_wallpaper,
-    installed_entries,
     install_wallpaper,
+    installed_entries,
     installed_wallpapers,
     load_catalog,
     remove_wallpaper,
@@ -32,7 +32,6 @@ from .plasma import PlasmaError, wait_for_plasma
 from .scheduler import ScheduleError
 from .state import StateError
 from .watchdog import WatchdogError, watch_plasma
-
 
 logger = get_logger("cli")
 

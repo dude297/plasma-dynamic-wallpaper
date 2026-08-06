@@ -10,7 +10,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-
 _METADATA_CACHE_VERSION = 1
 
 

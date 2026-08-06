@@ -10,7 +10,6 @@ from time import sleep
 
 from .logging import get_logger
 
-
 logger = get_logger("watchdog")
 _QDBUS_TIMEOUT_SECONDS = 10
 _RESUME_GAP_SECONDS = 10.0
@@ -124,7 +123,7 @@ def watch_plasma(
 
         if resumed:
             recovery_reason = (
-                "system resumed after an %.1f-second watchdog gap" % elapsed
+                f"system resumed after an {elapsed:.1f}-second watchdog gap"
             )
 
         if current_owner is None:

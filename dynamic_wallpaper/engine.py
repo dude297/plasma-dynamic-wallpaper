@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from time import perf_counter
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 from .cache import (
@@ -21,7 +21,6 @@ from .plasma import plasma_desktops, set_wallpaper, wallpaper_is_configured
 from .scheduler import ScheduleError, format_schedule, select_frame
 from .solar import calculate_solar_events, timezone_offset_for
 from .state import is_current, load_state, save_state
-
 
 logger = get_logger("engine")
 
@@ -202,7 +201,7 @@ class WallpaperEngine:
 
     def schedule(self) -> list[str]:
         """Return the formatted embedded schedule and appearance metadata."""
-        now = datetime.now()
+        now = datetime.now().astimezone()
         latitude, longitude = self._schedule_location()
         lines = [f"Schedule mode: {self.config.schedule_mode}"]
         if latitude is not None and longitude is not None:
