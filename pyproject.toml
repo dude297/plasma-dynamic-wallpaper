@@ -34,7 +34,7 @@ dev = [
     "build>=1.2",
     "pytest>=9",
     "pytest-cov>=7",
-    "ruff~=0.15.0",
+    "ruff>=0.15,<0.17",
     "twine>=6",
 ]
 
