@@ -6,40 +6,109 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from time import monotonic, perf_counter, sleep, time_ns
+from urllib.parse import unquote, urlparse
+from uuid import uuid4
+
+from .logging import get_logger
+
+
+logger = get_logger("plasma")
+_RENDER_ALIAS_LIMIT = 16
+_QDBUS_TIMEOUT_SECONDS = 15
 
 
 class PlasmaError(RuntimeError):
     """Raised when Plasma cannot update the wallpaper."""
 
 
-def set_wallpaper(image_path: Path) -> None:
-    qdbus = shutil.which("qdbus6")
+def set_wallpaper(
+    image_path: Path, screen_ids: tuple[int, ...] | None = None
+) -> None:
+    """Apply *image_path* to selected Plasma desktops and verify the write.
 
+    A unique alias gives each application a fresh file URI, avoiding stale
+    renderer caches. Alias cleanup occurs only after Plasma confirms the new
+    configuration and never removes a file still referenced by any desktop.
+    """
+    if not image_path.is_file():
+        raise PlasmaError(f"Wallpaper image was not found: {image_path}")
+
+    qdbus = shutil.which("qdbus6")
     if qdbus is None:
         raise PlasmaError("qdbus6 was not found")
 
-    wallpaper_uri = image_path.resolve().as_uri()
+    render_path = _create_render_alias(image_path)
+    wallpaper_uri = render_path.resolve().as_uri()
     encoded_uri = json.dumps(wallpaper_uri)
+    encoded_screens = json.dumps(
+        list(screen_ids) if screen_ids is not None else None
+    )
 
     script = f"""
 const allDesktops = desktops();
+const activeDesktops = allDesktops.filter(desktop => desktop.screen >= 0);
+const requestedScreens = {encoded_screens};
+const targetDesktops = requestedScreens === null
+    ? activeDesktops
+    : activeDesktops.filter(
+        desktop => requestedScreens.includes(desktop.screen)
+    );
 
-for (let index = 0; index < allDesktops.length; index++) {{
-    const desktop = allDesktops[index];
+if (allDesktops.length === 0) {{
+    throw new Error("Plasma reported no desktop containments");
+}}
 
+if (activeDesktops.length === 0) {{
+    throw new Error("Plasma reported no active desktop containments");
+}}
+
+if (targetDesktops.length === 0) {{
+    throw new Error("Plasma found no active desktops matching the requested screens");
+}}
+
+const updated = [];
+for (let index = 0; index < targetDesktops.length; index++) {{
+    const desktop = targetDesktops[index];
     desktop.wallpaperPlugin = "org.kde.image";
     desktop.currentConfigGroup = [
         "Wallpaper",
         "org.kde.image",
         "General"
     ];
-
     desktop.writeConfig("Image", {encoded_uri});
+    desktop.reloadConfig();
+    updated.push({{
+        id: desktop.id,
+        screen: desktop.screen,
+        image: desktop.readConfig("Image", "")
+    }});
 }}
+
+const active = [];
+for (let index = 0; index < allDesktops.length; index++) {{
+    const desktop = allDesktops[index];
+    desktop.currentConfigGroup = [
+        "Wallpaper",
+        "org.kde.image",
+        "General"
+    ];
+    active.push({{
+        id: desktop.id,
+        screen: desktop.screen,
+        image: desktop.readConfig("Image", "")
+    }});
+}}
+
+print(JSON.stringify({{updated, active}}));
 """.strip()
 
+    logger.info("Requesting Plasma wallpaper update: %s", wallpaper_uri)
+    logger.debug("Plasma evaluateScript payload:\n%s", script)
+    started = perf_counter()
+
     try:
-        subprocess.run(
+        completed = subprocess.run(
             [
                 qdbus,
                 "org.kde.plasmashell",
@@ -50,9 +119,373 @@ for (let index = 0; index < allDesktops.length; index++) {{
             check=True,
             capture_output=True,
             text=True,
+            timeout=_QDBUS_TIMEOUT_SECONDS,
         )
+    except subprocess.TimeoutExpired as exc:
+        raise PlasmaError("Plasma wallpaper update timed out") from exc
     except subprocess.CalledProcessError as exc:
         message = exc.stderr.strip() or exc.stdout.strip()
         raise PlasmaError(
             message or "Plasma rejected the wallpaper update"
         ) from exc
+
+    elapsed_ms = (perf_counter() - started) * 1000
+    logger.debug("Raw Plasma verification response: %r", completed.stdout)
+    updated, active_uris, missing_screens = _verify_wallpaper_response(
+        completed.stdout,
+        wallpaper_uri,
+        screen_ids,
+    )
+    if missing_screens:
+        logger.warning(
+            "Requested screen(s) temporarily unavailable: %s; "
+            "the next timer run will retry them",
+            ", ".join(str(value) for value in sorted(missing_screens)),
+        )
+    _prune_render_aliases(
+        render_path.parent,
+        protected_uris=active_uris,
+        keep=_RENDER_ALIAS_LIMIT,
+    )
+    logger.info(
+        "Plasma verified %d desktop(s) in %.1f ms",
+        len(updated),
+        elapsed_ms,
+    )
+
+
+def wait_for_plasma(
+    screen_ids: tuple[int, ...] | None = None,
+    *,
+    timeout: float = 45.0,
+    interval: float = 1.0,
+) -> list[dict[str, object]]:
+    """Wait until Plasma exposes at least one active target desktop.
+
+    Plasma can acquire its D-Bus name before desktop containments are ready,
+    especially during login or after a shell restart. This bounded retry keeps
+    startup synchronization inside the application instead of relying on a
+    fragile fixed systemd delay.
+    """
+    if timeout <= 0:
+        raise ValueError("Plasma readiness timeout must be positive")
+    if interval <= 0:
+        raise ValueError("Plasma readiness interval must be positive")
+
+    started = monotonic()
+    last_error = "Plasma reported no active desktop containments"
+    attempts = 0
+
+    while True:
+        attempts += 1
+        try:
+            records = plasma_desktops(screen_ids)
+        except PlasmaError as exc:
+            last_error = str(exc)
+        else:
+            if records:
+                logger.info(
+                    "Plasma became ready with %d active desktop(s) after %d attempt(s)",
+                    len(records),
+                    attempts,
+                )
+                return records
+            last_error = "Plasma reported no active desktop containments"
+
+        elapsed = monotonic() - started
+        if elapsed >= timeout:
+            raise PlasmaError(
+                f"Plasma did not become ready within {timeout:g} seconds: "
+                f"{last_error}"
+            )
+
+        remaining = timeout - elapsed
+        delay = min(interval, remaining)
+        logger.debug(
+            "Plasma is not ready yet (attempt %d): %s; retrying in %.1f s",
+            attempts,
+            last_error,
+            delay,
+        )
+        sleep(delay)
+
+
+def plasma_desktops(
+    screen_ids: tuple[int, ...] | None = None,
+) -> list[dict[str, object]]:
+    """Return active Plasma desktop wallpaper configuration records."""
+    qdbus = shutil.which("qdbus6")
+    if qdbus is None:
+        raise PlasmaError("qdbus6 was not found")
+
+    encoded_screens = json.dumps(
+        list(screen_ids) if screen_ids is not None else None
+    )
+    script = f"""
+const requestedScreens = {encoded_screens};
+const activeDesktops = desktops().filter(desktop => desktop.screen >= 0);
+const selected = requestedScreens === null
+    ? activeDesktops
+    : activeDesktops.filter(
+        desktop => requestedScreens.includes(desktop.screen)
+    );
+const result = [];
+for (let index = 0; index < selected.length; index++) {{
+    const desktop = selected[index];
+    desktop.currentConfigGroup = [
+        "Wallpaper",
+        "org.kde.image",
+        "General"
+    ];
+    result.push({{
+        id: desktop.id,
+        screen: desktop.screen,
+        plugin: desktop.wallpaperPlugin,
+        image: desktop.readConfig("Image", "")
+    }});
+}}
+print(JSON.stringify(result));
+""".strip()
+
+    try:
+        completed = subprocess.run(
+            [
+                qdbus,
+                "org.kde.plasmashell",
+                "/PlasmaShell",
+                "org.kde.PlasmaShell.evaluateScript",
+                script,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=_QDBUS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise PlasmaError("Plasma wallpaper query timed out") from exc
+    except subprocess.CalledProcessError as exc:
+        message = exc.stderr.strip() or exc.stdout.strip()
+        raise PlasmaError(
+            message or "Could not query Plasma desktop configuration"
+        ) from exc
+
+    try:
+        records = json.loads(completed.stdout.strip())
+    except json.JSONDecodeError as exc:
+        raise PlasmaError(
+            "Plasma returned an invalid desktop configuration response"
+        ) from exc
+    if not isinstance(records, list):
+        raise PlasmaError(
+            "Plasma returned an invalid desktop configuration response"
+        )
+    if not all(isinstance(record, dict) for record in records):
+        raise PlasmaError(
+            "Plasma returned an invalid desktop configuration record"
+        )
+    return records
+
+
+def wallpaper_is_configured(
+    image_path: Path, screen_ids: tuple[int, ...] | None = None
+) -> bool:
+    """Return whether selected desktops reference a usable alias of a frame."""
+    qdbus = shutil.which("qdbus6")
+    if qdbus is None:
+        raise PlasmaError("qdbus6 was not found")
+
+    encoded_screens = json.dumps(
+        list(screen_ids) if screen_ids is not None else None
+    )
+    script = f"""
+const requestedScreens = {encoded_screens};
+const activeDesktops = desktops().filter(desktop => desktop.screen >= 0);
+const selected = requestedScreens === null
+    ? activeDesktops
+    : activeDesktops.filter(
+        desktop => requestedScreens.includes(desktop.screen)
+    );
+const result = [];
+for (let index = 0; index < selected.length; index++) {{
+    const desktop = selected[index];
+    desktop.currentConfigGroup = [
+        "Wallpaper",
+        "org.kde.image",
+        "General"
+    ];
+    result.push({{
+        id: desktop.id,
+        screen: desktop.screen,
+        image: desktop.readConfig("Image", "")
+    }});
+}}
+print(JSON.stringify(result));
+""".strip()
+
+    try:
+        completed = subprocess.run(
+            [
+                qdbus,
+                "org.kde.plasmashell",
+                "/PlasmaShell",
+                "org.kde.PlasmaShell.evaluateScript",
+                script,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=_QDBUS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise PlasmaError("Plasma wallpaper query timed out") from exc
+    except subprocess.CalledProcessError as exc:
+        message = exc.stderr.strip() or exc.stdout.strip()
+        raise PlasmaError(
+            message or "Could not query the configured Plasma wallpaper"
+        ) from exc
+
+    try:
+        records = json.loads(completed.stdout.strip())
+    except json.JSONDecodeError as exc:
+        raise PlasmaError(
+            "Plasma returned an invalid wallpaper query response"
+        ) from exc
+    if not isinstance(records, list) or not records:
+        return False
+
+    expected = image_path.resolve()
+    for record in records:
+        if not isinstance(record, dict):
+            return False
+        configured = _path_from_file_uri(record.get("image"))
+        if configured is None or not configured.is_file():
+            return False
+        resolved = configured.resolve()
+        if resolved == expected:
+            continue
+        if not (
+            resolved.parent.name == ".plasma-render"
+            and resolved.parent.parent == expected.parent
+            and resolved.name.startswith(expected.stem + "-")
+            and resolved.suffix == expected.suffix
+        ):
+            return False
+
+    return True
+
+
+def _create_render_alias(image_path: Path) -> Path:
+    """Create a unique alias so Plasma receives a fresh URI every time."""
+    render_dir = image_path.parent / ".plasma-render"
+    render_dir.mkdir(parents=True, exist_ok=True)
+    alias = render_dir / (
+        f"{image_path.stem}-{time_ns():020d}-{uuid4().hex}{image_path.suffix}"
+    )
+
+    try:
+        alias.hardlink_to(image_path)
+    except OSError:
+        shutil.copy2(image_path, alias)
+
+    logger.debug("Created Plasma render alias: %s", alias)
+    return alias
+
+
+def _path_from_file_uri(uri: object) -> Path | None:
+    if not isinstance(uri, str):
+        return None
+    parsed = urlparse(uri)
+    if parsed.scheme != "file" or parsed.netloc not in {"", "localhost"}:
+        return None
+    return Path(unquote(parsed.path))
+
+
+def _prune_render_aliases(
+    render_dir: Path,
+    *,
+    protected_uris: set[str],
+    keep: int,
+) -> None:
+    """Prune inactive aliases while preserving every active Plasma URI."""
+    protected_paths = {
+        path.resolve()
+        for uri in protected_uris
+        if (path := _path_from_file_uri(uri)) is not None
+    }
+    aliases = sorted(
+        (path for path in render_dir.iterdir() if path.is_file()),
+        key=lambda path: path.name,
+        reverse=True,
+    )
+    inactive = [
+        path for path in aliases if path.resolve() not in protected_paths
+    ]
+
+    for stale in inactive[keep:]:
+        try:
+            stale.unlink()
+        except OSError:
+            logger.debug(
+                "Could not remove stale Plasma render alias: %s",
+                stale,
+            )
+
+
+def _verification_records(
+    value: object, field: str
+) -> list[dict[str, object]]:
+    if not isinstance(value, list) or not value:
+        raise PlasmaError(f"Plasma did not report any {field} desktops")
+    if not all(isinstance(record, dict) for record in value):
+        raise PlasmaError(
+            "Plasma returned an invalid wallpaper verification record"
+        )
+    return value
+
+
+def _verify_wallpaper_response(
+    output: str,
+    expected_uri: str,
+    expected_screens: tuple[int, ...] | None = None,
+) -> tuple[list[dict[str, object]], set[str], set[int]]:
+    """Verify active updates and report temporarily unavailable screens."""
+    try:
+        payload = json.loads(output.strip())
+    except json.JSONDecodeError as exc:
+        raise PlasmaError(
+            f"Plasma returned an invalid verification response: {output.strip()}"
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise PlasmaError("Plasma returned an invalid verification response")
+
+    updated = _verification_records(payload.get("updated"), "updated")
+    active = _verification_records(payload.get("active"), "active")
+
+    missing_screens: set[int] = set()
+    if expected_screens is not None:
+        reported_screens = {
+            screen
+            for record in updated
+            if isinstance((screen := record.get("screen")), int)
+        }
+        missing_screens = set(expected_screens) - reported_screens
+
+    mismatches = [
+        record for record in updated if record.get("image") != expected_uri
+    ]
+    if mismatches:
+        details = ", ".join(
+            f"desktop {record.get('id', '?')}: {record.get('image', '')!r}"
+            for record in mismatches
+        )
+        raise PlasmaError(
+            "Plasma did not retain the requested wallpaper: " + details
+        )
+
+    active_uris = {
+        image
+        for record in active
+        if isinstance((image := record.get("image")), str) and image
+    }
+    return updated, active_uris, missing_screens

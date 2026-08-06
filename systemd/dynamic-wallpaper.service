@@ -5,4 +5,7 @@ PartOf=graphical-session.target
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/dynamic-wallpaper
+TimeoutStartSec=75s
+Restart=on-failure
+RestartSec=5s
+ExecStart=%h/.local/bin/dynamic-wallpaper --startup

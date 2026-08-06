@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plasma-dynamic-wallpaper"
+version = "0.2.0"
+description = "Use Apple's Dynamic Desktop HEIC wallpapers on KDE Plasma."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+keywords = ["kde", "plasma", "wallpaper", "heic", "dynamic-desktop"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: X11 Applications :: KDE",
+    "Environment :: Wayland",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Desktop Environment",
+]
+
+[project.urls]
+Homepage = "https://github.com/dude297/plasma-dynamic-wallpaper"
+Repository = "https://github.com/dude297/plasma-dynamic-wallpaper"
+Issues = "https://github.com/dude297/plasma-dynamic-wallpaper/issues"
+Documentation = "https://github.com/dude297/plasma-dynamic-wallpaper/tree/main/docs"
+Changelog = "https://github.com/dude297/plasma-dynamic-wallpaper/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.2",
+    "pytest>=9",
+    "pytest-cov>=7",
+    "ruff~=0.15.0",
+    "twine>=6",
+]
+
+[project.scripts]
+dynamic-wallpaper = "dynamic_wallpaper.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["dynamic_wallpaper*"]
+
+[tool.setuptools.package-data]
+"dynamic_wallpaper.data" = ["config.example", "*.service", "*.timer"]
+
+[tool.ruff]
+line-length = 79
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: requires an explicitly enabled live KDE Plasma session",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"dynamic_wallpaper/cli.py" = ["DTZ005", "DTZ007"]
+"tests/test_cli.py" = ["DTZ001"]
+"tests/test_engine.py" = ["DTZ001"]
+"tests/test_scheduler.py" = ["DTZ001"]

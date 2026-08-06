@@ -1,133 +1,232 @@
 # Plasma Dynamic Wallpaper
 
-> Use Apple's Dynamic Desktop HEIC wallpapers on KDE Plasma.
+[![CI](https://github.com/dude297/plasma-dynamic-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/dude297/plasma-dynamic-wallpaper/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/plasma-dynamic-wallpaper)](https://pypi.org/project/plasma-dynamic-wallpaper/)
+[![Python](https://img.shields.io/pypi/pyversions/plasma-dynamic-wallpaper)](https://pypi.org/project/plasma-dynamic-wallpaper/)
+[![License](https://img.shields.io/github/license/dude297/plasma-dynamic-wallpaper)](LICENSE)
+[![KDE Plasma 6](https://img.shields.io/badge/KDE%20Plasma-6-1d99f3)](https://kde.org/plasma-desktop/)
 
-![Demo](docs/demo.gif)
-Bring Apple's Dynamic Desktop HEIC wallpapers to KDE Plasma.
-Plasma Dynamic Wallpaper is one of the few Linux implementations that uses Apple's embedded apple_desktop:h24 metadata directly, preserving the original Dynamic Desktop schedule instead of approximating it.
+Use Apple Dynamic Desktop HEIC wallpapers on KDE Plasma while preserving the
+embedded `apple_desktop:h24` timeline—or align the same frames with local dawn,
+solar noon, and dusk.
 
-## Features
+![Plasma Dynamic Wallpaper demo](docs/demo.gif)
 
-- Apple Dynamic Desktop HEIC support
-- Native `apple_desktop:h24` schedule decoding
-- Automatic frame extraction and caching
-- KDE Plasma integration
-- User-level systemd timer
-- Skips redundant wallpaper updates
-- CLI for inspection and testing
-- No root required
+## Highlights
 
-## Requirements
+- Decodes Apple Dynamic Desktop metadata directly.
+- Supports embedded and solar-aware schedules.
+- Extracts frames once and reuses source-aware caches.
+- Reconciles the active wallpaper after login, resume, display changes, and
+  Plasma Shell restarts.
+- Handles active multi-monitor layouts and ignores detached containments.
+- Includes a managed local wallpaper library.
+- Provides user-level systemd timer and watchdog services.
+- Offers diagnostics, status, cache maintenance, and dry-run commands.
+- Uses atomic state and configuration writes.
+- Requires no root access for normal operation.
 
-Ubuntu/Kubuntu:
+## Quick start
+
+### pipx (recommended)
+
+Install the Python package in an isolated environment:
+
+```bash
+pipx install plasma-dynamic-wallpaper
+dynamic-wallpaper --setup
+```
+
+Import and activate a wallpaper:
+
+```bash
+dynamic-wallpaper install ~/Pictures/Fuji.heic --name fuji
+dynamic-wallpaper use fuji
+dynamic-wallpaper --force
+```
+
+### From source
+
+```bash
+git clone https://github.com/dude297/plasma-dynamic-wallpaper.git
+cd plasma-dynamic-wallpaper
+./install.sh
+```
+
+Ubuntu and Kubuntu dependencies:
 
 ```bash
 sudo apt install python3 libimage-exiftool-perl libheif-examples qdbus-qt6
 ```
 
-Requires:
+See the [installation guide](docs/installation.md) for updating, uninstalling,
+and native package notes.
 
-- Python 3
-- exiftool
-- heif-convert
-- qdbus6
-- systemd
+## Common commands
 
-## Installation
+| Command | Purpose |
+| --- | --- |
+| `dynamic-wallpaper --doctor` | Check dependencies, configuration, and cache access. |
+| `dynamic-wallpaper --current` | Compare the scheduled frame with active Plasma desktops. |
+| `dynamic-wallpaper --schedule` | Show today's resolved embedded or solar schedule. |
+| `dynamic-wallpaper --status` | Show the last successful wallpaper application. |
+| `dynamic-wallpaper --config` | Show resolved paths, screens, and schedule mode. |
+| `dynamic-wallpaper --inspect` | Print decoded Apple metadata. |
+| `dynamic-wallpaper --cache-status` | Check frame-cache freshness and integrity. |
+| `dynamic-wallpaper --rebuild-cache` | Replace cached frames from the source HEIC. |
+| `dynamic-wallpaper --at 18:00 --dry-run` | Preview selection for a specific time. |
+| `dynamic-wallpaper --startup` | Wait for Plasma and reapply the current frame. |
+| `dynamic-wallpaper --force --verbose` | Force an update with detailed diagnostics. |
 
-```bash
-git clone https://github.com/dude297/plasma-dynamic-wallpaper.git
-cd plasma-dynamic-wallpaper
-
-chmod +x install.sh
-./install.sh
-```
-
-Configure:
-
-```bash
-~/.config/dynamic-wallpaper/config
-```
-
-Example:
+### Managed wallpapers
 
 ```bash
-HEIC_FILE="$HOME/Pictures/DynamicWallpapers/Fuji/Fuji.heic"
-CACHE_DIR="$HOME/.cache/dynamic-wallpaper/Fuji"
+dynamic-wallpaper install ~/Pictures/Fuji.heic --name fuji
+dynamic-wallpaper install ~/Pictures/Sonoma.heic --name sonoma
+dynamic-wallpaper list
+dynamic-wallpaper use sonoma
+dynamic-wallpaper remove fuji
 ```
 
-## Usage
+Each managed wallpaper receives an isolated source directory and cache. The
+active entry is marked with `*` in `dynamic-wallpaper list`.
+
+## Scheduling
+
+### Embedded schedule
+
+The default mode follows the transition times stored in Apple's HEIC metadata:
+
+```ini
+SCHEDULE_MODE=embedded
+```
+
+### Solar-aware schedule
+
+Solar mode preserves the original frame order but maps its day anchors to local
+civil dawn, solar noon, and civil dusk:
+
+```ini
+SCHEDULE_MODE=solar
+LATITUDE=37.3382
+LONGITUDE=-121.8863
+```
+
+Coordinates are decimal degrees; west longitudes are negative. The calculation
+is local and does not require network access. At polar dates without civil dawn
+or dusk, the command reports an actionable error rather than silently choosing
+an incorrect frame.
+
+Inspect the resolved timeline with:
 
 ```bash
-dynamic-wallpaper                 # Apply wallpaper
-dynamic-wallpaper --schedule      # Show Apple schedule
-dynamic-wallpaper --inspect       # View decoded metadata
-dynamic-wallpaper --extract       # Extract frames only
-dynamic-wallpaper --dry-run       # Preview selected frame
-dynamic-wallpaper --at 18:00 --dry-run
-dynamic-wallpaper --force
+dynamic-wallpaper --schedule
+dynamic-wallpaper --current
 ```
 
-## Systemd
+## Multi-monitor behavior
 
-The installer enables a user timer that updates the wallpaper every five minutes.
+By default, all currently active Plasma screens are detected automatically.
+Detached containments reported as `screen=-1` are ignored and retried when they
+become active again. To restrict updates, set explicit screen IDs:
+
+```ini
+SCREEN_IDS=0,1
+```
+
+## Reliability services
+
+`dynamic-wallpaper --setup` installs two user services:
+
+- `dynamic-wallpaper.timer` reconciles the schedule every minute.
+- `dynamic-wallpaper-watch.service` requests immediate recovery after Plasma
+  returns on D-Bus or the machine resumes from sleep.
+
+Useful checks:
 
 ```bash
-systemctl --user status dynamic-wallpaper.timer
-systemctl --user start dynamic-wallpaper.service
-journalctl --user -u dynamic-wallpaper.service -n 20
+systemctl --user status dynamic-wallpaper.timer --no-pager
+systemctl --user status dynamic-wallpaper-watch.service --no-pager
+journalctl --user -u dynamic-wallpaper.service -n 50 --no-pager
+journalctl --user -u dynamic-wallpaper-watch.service -n 50 --no-pager
 ```
 
-## Project Layout
+## How it works
 
 ```text
-plasma-dynamic-wallpaper/
-├── bin/
-├── config/
-├── dynamic_wallpaper/
-├── systemd/
-├── install.sh
-├── uninstall.sh
-└── README.md
+Apple HEIC
+    │
+    ▼
+metadata decoder ──► embedded or solar scheduler
+    │                         │
+    ▼                         ▼
+source-aware frame cache ─► selected PNG
+                              │
+                              ▼
+                    Plasma D-Bus adapter
+                              │
+                              ▼
+                 active desktop containments
 ```
 
-## Cache
+The engine verifies Plasma's read-back response before saving state. Unique
+render aliases avoid stale image-provider caches, while active aliases are
+protected from cleanup.
 
-```
-~/.cache/dynamic-wallpaper/
-```
+More detail: [Architecture](docs/architecture.md).
 
-The current wallpaper state is stored in:
+## Troubleshooting
 
-```
-~/.cache/dynamic-wallpaper/state.json
-```
-
-to avoid reapplying the same frame.
-
-## Updating
+Start with:
 
 ```bash
-git pull
-./install.sh
+dynamic-wallpaper --doctor
+dynamic-wallpaper --current
 ```
 
-## Uninstall
+| Symptom | First check |
+| --- | --- |
+| Wallpaper did not change | `dynamic-wallpaper --force --verbose` |
+| Default wallpaper after login | `journalctl --user -u dynamic-wallpaper.service -b` |
+| Recovery after sleep failed | Check `dynamic-wallpaper-watch.service`. |
+| A monitor is skipped | Check Plasma screen IDs with `--current`; detached screens are expected to be inactive. |
+| Cache looks damaged | Run `dynamic-wallpaper --cache-status`, then `--rebuild-cache`. |
+| Solar schedule looks wrong | Verify latitude, longitude, local time zone, and `--schedule`. |
+
+See [Troubleshooting](docs/troubleshooting.md) and [FAQ](docs/faq.md).
+
+## Development
 
 ```bash
-./uninstall.sh
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+
+python -m ruff check .
+python -m ruff format --check .
+python -m pytest
+python -m build
+python -m twine check dist/*
 ```
 
-User configuration and cache are preserved.
+Contribution and live-Plasma testing guidance:
+
+- [Contributing](CONTRIBUTING.md)
+- [Testing](docs/testing.md)
+- [Release process](docs/release-process.md)
+- [Packaging](docs/packaging.md)
 
 ## Roadmap
 
-- Multiple wallpaper collections
-- Additional desktop environments
-- Automated tests
-- GitHub Actions
-- Package distribution
+- **v0.3:** release polish, native packaging, richer diagnostics.
+- **v0.4:** native KDE configuration UI and previews.
+- **v0.5:** optional GeoClue-based location discovery and additional desktop
+  backends.
+
+Automatic location discovery is intentionally deferred: solar mode currently
+uses explicit coordinates, stays offline, and avoids unexpected location access.
 
 ## License
 
-Released under the MIT License.
+Released under the [MIT License](LICENSE).

@@ -6,3 +6,10 @@ CACHE_DIR="$HOME/.cache/dynamic-wallpaper/Fuji"
 
 # How often systemd checks the wallpaper
 CHECK_INTERVAL_MINUTES=15
+
+# Optional Plasma screen IDs to update, comma-separated.
+# Omit this setting to update every connected screen.
+# By default, all currently active screens are detected automatically.
+# Set SCREEN_IDS only to restrict updates to specific active Plasma screens.
+# Temporarily disconnected screens are skipped and retried automatically.
+# SCREEN_IDS=0,1
